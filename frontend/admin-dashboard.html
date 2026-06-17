@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - GenRent</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Gen<span>Rent</span> <span style="font-size:0.7rem;color:#9ca3af;font-weight:400;">Admin</span></span>
+    </a>
+    <div style="color:#9ca3af;font-size:0.875rem;">Admin Panel</div>
+    <div class="navbar-actions">
+      <a href="/" class="btn btn-outline btn-sm">View Site</a>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Admin Menu</div>
+    <ul class="sidebar-nav">
+      <li><a href="#" class="active" onclick="showSection('stats')" id="nav-stats">
+        <span class="nav-icon">📊</span> Statistics
+      </a></li>
+      <li><a href="#" onclick="showSection('vendors')" id="nav-vendors">
+        <span class="nav-icon">🏢</span> Vendors
+      </a></li>
+      <li><a href="#" onclick="showSection('generators')" id="nav-generators">
+        <span class="nav-icon">🔧</span> Equipment
+      </a></li>
+      <li><a href="#" onclick="showSection('bookings')" id="nav-bookings">
+        <span class="nav-icon">📋</span> Bookings
+      </a></li>
+      <li><a href="#" onclick="showSection('withdrawals')" id="nav-withdrawals">
+        <span class="nav-icon">💸</span> Withdrawals
+      </a></li>
+      <li><a href="#" onclick="showSection('disputes')" id="nav-disputes">
+        <span class="nav-icon">⚠️</span> Disputes
+      </a></li>
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- STATS -->
+    <div id="section-stats">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard Overview</div>
+          <div class="page-subtitle">Platform statistics at a glance</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="loadStats()">Refresh</button>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card skeleton" style="height:100px;"></div>
+        <div class="stat-card skeleton" style="height:100px;"></div>
+        <div class="stat-card skeleton" style="height:100px;"></div>
+        <div class="stat-card skeleton" style="height:100px;"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">Vendor Stats</div>
+          </div>
+          <div id="vendorStats" style="padding:1.5rem;">Loading...</div>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <div class="table-title">Booking Stats</div>
+          </div>
+          <div id="bookingStats" style="padding:1.5rem;">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VENDORS -->
+    <div id="section-vendors" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Vendor Management</div>
+          <div class="page-subtitle">Verify and manage vendor accounts</div>
+        </div>
+        <select id="vendorVerifiedFilter" onchange="loadVendors()" style="padding:0.5rem 1rem;border:1px solid var(--border);border-radius:var(--radius);font-size:0.875rem;">
+          <option value="">All Vendors</option>
+          <option value="false">Pending Verification</option>
+          <option value="true">Verified</option>
+        </select>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Company</th>
+              <th>Owner</th>
+              <th>City</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vendorsTableBody">
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- GENERATORS -->
+    <div id="section-generators" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">All Equipment</div>
+          <div class="page-subtitle">Monitor all listed equipment items</div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Vendor</th>
+              <th>Capacity</th>
+              <th>Price/Day</th>
+              <th>City</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="generatorsTableBody">
+            <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BOOKINGS -->
+    <div id="section-bookings" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">All Bookings</div>
+          <div class="page-subtitle">Monitor all booking requests</div>
+        </div>
+        <select id="adminBookingFilter" onchange="loadAdminBookings()" style="padding:0.5rem 1rem;border:1px solid var(--border);border-radius:var(--radius);font-size:0.875rem;">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="delivered">Delivered</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#ID</th>
+              <th>Customer</th>
+              <th>Equipment</th>
+              <th>Vendor</th>
+              <th>Dates</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="adminBookingsBody">
+            <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WITHDRAWALS -->
+    <div id="section-withdrawals" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Withdrawal Requests</div>
+          <div class="page-subtitle">Approve or reject vendor payout requests</div>
+        </div>
+        <select id="withdrawalFilter" onchange="loadAdminWithdrawals()" style="padding:0.5rem 1rem;border:1px solid var(--border);border-radius:var(--radius);font-size:0.875rem;">
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="all">All</option>
+        </select>
+      </div>
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#ID</th><th>Vendor</th><th>Amount</th><th>Bank</th><th>Account</th><th>IFSC</th><th>Date</th><th>Status</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="withdrawalsBody">
+            <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DISPUTES -->
+    <div id="section-disputes" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">⚠️ Damage Disputes</div>
+          <div class="page-subtitle">Review and resolve equipment damage claims</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <select id="disputeStatusFilter" onchange="loadAdminDisputes()" style="padding:0.5rem 1rem;border:1px solid var(--border);border-radius:var(--radius);font-size:0.875rem;">
+            <option value="">All Disputes</option>
+            <option value="open">Open</option>
+            <option value="resolved">Resolved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="loadAdminDisputes()">🔄 Refresh</button>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#ID</th><th>Booking</th><th>Raised By</th><th>Description</th><th>Claimed ₹</th><th>Date</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="disputesBody">
+          <tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/admin.js"></script>
+</body>
+</html>

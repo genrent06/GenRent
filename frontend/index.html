@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GenRent - Equipment Rental Marketplace</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Gen<span>Rent</span></span>
+    </a>
+    <ul class="navbar-links">
+      <li><a href="/#generators">Browse Equipment</a></li>
+      <li><a href="/#how-it-works">How It Works</a></li>
+      <li><a href="/register?role=vendor">List Equipment</a></li>
+    </ul>
+    <div class="navbar-actions" id="navActions">
+      <a href="/login" class="btn btn-outline btn-sm">Login</a>
+      <a href="/register" class="btn btn-primary btn-sm">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">⚡ Industrial Equipment Rental Marketplace</div>
+    <h1>Find Equipment For <span>Your Project</span></h1>
+    <p>Generators, Tower Lights, Forklifts, Cranes, and more. Browse verified equipment from trusted vendors. Book online in minutes.</p>
+
+    <div class="search-box">
+      <div class="search-field">
+        <label>Location</label>
+        <select id="searchCity">
+          <option value="">All Cities</option>
+          <option value="Mumbai" selected>Mumbai</option>
+          <option value="Pune">Pune</option>
+          <option value="Thane">Thane</option>
+          <option value="Navi Mumbai">Navi Mumbai</option>
+          <option value="Delhi">Delhi</option>
+          <option value="Bangalore">Bangalore</option>
+        </select>
+      </div>
+      <div class="search-field">
+        <label>Category</label>
+        <select id="searchCategory" onchange="onSearchCategoryChange()">
+          <option value="">All Categories</option>
+        </select>
+      </div>
+      <div class="search-field">
+        <label>Duration</label>
+        <select id="searchDuration">
+          <option value="">Any Duration</option>
+          <option value="1">1 Day</option>
+          <option value="7">1 Week</option>
+          <option value="30">1 Month</option>
+          <option value="90">3 Months</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="searchEquipment()">Search Equipment</button>
+    </div>
+
+    <!-- Dynamic Specification Filters -->
+    <div id="dynamicSpecFilters" style="display:none; background: rgba(26, 26, 46, 0.95); margin-top: 1rem; padding: 1.25rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); border: 1px solid rgba(255,255,255,0.15); text-align: left; max-width: 700px; margin-left: auto; margin-right: auto; color: white;">
+      <div style="font-weight:600; font-size:0.875rem; margin-bottom:0.75rem; color: var(--primary);">Filter by Specifications</div>
+      <div id="specFiltersGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-number" id="statVendors">50+</div>
+      <div class="stat-label">Verified Vendors</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number" id="statGenerators">200+</div>
+      <div class="stat-label">Equipment Listed</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">10–500</div>
+      <div class="stat-label">kVA Range</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">24/7</div>
+      <div class="stat-label">Support Available</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEM SECTION -->
+<section class="section" style="background: var(--bg);">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">The Problem</div>
+      <h2 class="section-title">Power Backup Shouldn't Be Hard to Find</h2>
+      <p class="section-desc">When power outages happen or events need temporary electricity, finding a generator quickly can be frustrating. Calls, negotiations, and uncertain availability waste valuable time.</p>
+    </div>
+    <div class="trust-badges">
+      <div class="trust-badge">
+        <span class="trust-icon">✔</span>
+        <div>
+          <strong>Verified Vendors</strong>
+          <div>Every vendor is verified before listing</div>
+        </div>
+      </div>
+      <div class="trust-badge">
+        <span class="trust-icon">✔</span>
+        <div>
+          <strong>Secure Advance Payment</strong>
+          <div>30% advance — rest paid on delivery</div>
+        </div>
+      </div>
+      <div class="trust-badge">
+        <span class="trust-icon">✔</span>
+        <div>
+          <strong>Transparent Pricing</strong>
+          <div>No hidden charges, fixed daily rates</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAPACITY CATEGORIES -->
+<section class="section" style="background: var(--white);">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Browse by Category</div>
+      <h2 class="section-title">Popular Equipment Categories</h2>
+      <p class="section-desc">All the equipment you need for your projects</p>
+    </div>
+    <div class="categories-grid" id="popularCategories">
+      <!-- Categories loaded dynamically from API -->
+      <div style="grid-column:1/-1;text-align:center;padding:2rem;color:#6b7280;">Loading categories...</div>
+    </div>
+  </div>
+</section>
+
+<!-- EQUIPMENT LISTING -->
+<section class="section" id="generators">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label">Available Now</div>
+      <h2 class="section-title">Equipment Catalog</h2>
+      <p class="section-desc">All equipment from verified vendors</p>
+    </div>
+
+    <div id="generatorsLoading" style="text-align:center;padding:3rem;color:#6b7280;">
+      Loading equipment...
+    </div>
+    
+    <div id="generatorsGrid" class="table-responsive" style="display:none;">
+      <table class="equipment-table">
+        <thead>
+          <tr>
+            <th>Equipment Name</th>
+            <th>Category</th>
+            <th>Location</th>
+            <th>Price/Month</th>
+            <th>Vendor</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="equipmentBody">
+        </tbody>
+      </table>
+    </div>
+    
+    <div id="generatorsEmpty" class="empty-state" style="display:none;">
+      <div class="empty-icon">⚡</div>
+      <div class="empty-title">No equipment found</div>
+      <p>Try changing your search filters</p>
+    </div>
+
+    <div id="pagination" class="pagination" style="display:none;"></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section how-it-works" id="how-it-works">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-label" style="color: var(--primary);">Simple Process</div>
+      <h2 class="section-title" style="color: white;">GenRent Makes Equipment Rental Simple</h2>
+      <p class="section-desc">Book equipment in 3 simple steps</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-title">Search Near You</div>
+        <div class="step-desc">Filter by category, location, and price. Compare equipment from verified vendors instantly.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-title">Book & Pay Online</div>
+        <div class="step-desc">Book in minutes. Pay only 30% advance — the rest is settled on delivery.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-title">Get It Delivered</div>
+        <div class="step-desc">Verified vendor delivers to your location. Confirm receipt via OTP and you're all set.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VENDOR CTA -->
+<section class="vendor-cta">
+  <h2>Have Equipment to Rent? Get More Customers</h2>
+  <p>Join GenRent and connect with businesses looking for equipment rentals in your area. List generators, forklifts, cranes, compressors, and more. Listing is free — you only pay a small commission per booking.</p>
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+    <a href="/register?role=vendor" class="btn btn-white btn-lg">List Your Equipment</a>
+    <a href="/login" class="btn btn-outline btn-lg" style="border-color:rgba(255,255,255,0.4);">Vendor Login</a>
+  </div>
+</section>
+
+<!-- BOTTOM CTA -->
+<section class="section" style="background: var(--bg); text-align: center;">
+  <div class="container" style="max-width: 640px;">
+    <h2 style="font-size: 2rem; margin-bottom: 1rem;">Get Equipment When You Need It</h2>
+    <p style="color: var(--text-light); margin-bottom: 2rem;">Search hundreds of verified equipment available for rent across India. Generators, tools, cranes, and more. Book in minutes, delivered to your door.</p>
+    <a href="#generators" class="btn btn-primary btn-lg" onclick="document.getElementById('generators').scrollIntoView({behavior:'smooth'})">Find Equipment Near You</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="logo-text">Gen<span>Rent</span></div>
+      <p>India's industrial equipment rental marketplace. Connecting businesses with verified equipment vendors across Mumbai and beyond.</p>
+    </div>
+    <div class="footer-col">
+      <h4>For Customers</h4>
+      <ul>
+        <li><a href="/#generators">Browse Equipment</a></li>
+        <li><a href="/register">Create Account</a></li>
+        <li><a href="/login">Track Booking</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>For Vendors</h4>
+      <ul>
+        <li><a href="/register?role=vendor">List Equipment</a></li>
+        <li><a href="/vendor-dashboard">Vendor Dashboard</a></li>
+        <li><a href="/login">Vendor Login</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <ul>
+        <li><a href="tel:+919999999999">+91 99999 99999</a></li>
+        <li><a href="mailto:hello@genrent.in">hello@genrent.in</a></li>
+        <li><a href="#">WhatsApp Support</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 GenRent. All rights reserved.</span>
+    <span>Built for Mumbai. Growing across India.</span>
+  </div>
+</footer>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/equipment.js?v=2"></script>
+</body>
+</html>

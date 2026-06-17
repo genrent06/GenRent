@@ -1,0 +1,18 @@
+{
+  "go.goroot": "",
+  "go.toolsManagement.autoUpdate": true,
+  "gopls": {
+    "build.directoryFilters": [
+      "-**/node_modules"
+    ]
+  },
+  "go.testEnvVars": {
+    "DATABASE_URL": "host=localhost user=postgres password=postgres dbname=genrent port=5432 sslmode=disable"
+  },
+  "[go]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  }
+}

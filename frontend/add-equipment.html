@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Equipment - GenRent</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body style="background: var(--bg); min-height: 100vh;">
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Gen<span>Rent</span></span>
+    </a>
+    <div class="navbar-actions">
+      <a href="/vendor-dashboard" class="btn btn-outline btn-sm">Dashboard</a>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container" style="max-width: 700px; padding: 3rem 1rem;">
+  <div style="background: white; border-radius: var(--radius-lg); padding: 2.5rem; box-shadow: var(--shadow); border: 1px solid var(--border);">
+    <div style="margin-bottom: 2rem;">
+      <h1 style="font-size: 1.75rem; font-weight: 800; color: var(--text);">Add New Equipment</h1>
+      <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0.25rem;">List your industrial equipment on GenRent marketplace</p>
+    </div>
+
+    <div id="formAlert"></div>
+
+    <form id="addEquipmentForm" onsubmit="saveEquipment(event)">
+      <!-- Category selection -->
+      <div class="form-group">
+        <label>Category *</label>
+        <select id="equipCategory" required style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);">
+          <option value="">Select Category</option>
+        </select>
+      </div>
+
+      <!-- Basic Info -->
+      <div class="form-group">
+        <label>Equipment / Model Name *</label>
+        <input type="text" id="equipName" placeholder="e.g. Cummins 62.5kVA Silent Generator" required style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+      </div>
+
+      <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group">
+          <label>Brand</label>
+          <input type="text" id="equipBrand" placeholder="e.g. Cummins, Kirloskar, JCB" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+        <div class="form-group">
+          <label>Model / Capacity Spec</label>
+          <input type="text" id="equipModel" placeholder="e.g. 62.5kVA, 3 Ton" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+      </div>
+
+      <!-- Pricing -->
+      <div class="form-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group">
+          <label>Daily Price (₹) *</label>
+          <input type="number" id="equipPriceDay" placeholder="1800" required min="1" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+        <div class="form-group">
+          <label>Weekly Price (₹)</label>
+          <input type="number" id="equipPriceWeek" placeholder="11000" min="0" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+        <div class="form-group">
+          <label>Monthly Price (₹)</label>
+          <input type="number" id="equipPriceMonth" placeholder="42000" min="0" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+      </div>
+
+      <!-- Transport Fees + Quantity -->
+      <div class="form-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group">
+          <label>Mobilization Fee (₹) <small style="color:var(--text-light)">Transport to site</small></label>
+          <input type="number" id="equipMobFee" placeholder="2000" min="0" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+        <div class="form-group">
+          <label>Demobilization Fee (₹) <small style="color:var(--text-light)">Pickup from site</small></label>
+          <input type="number" id="equipDemobFee" placeholder="2000" min="0" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+        <div class="form-group">
+          <label>Total Units Available</label>
+          <input type="number" id="equipQty" placeholder="1" min="1" value="1" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+      </div>
+
+      <!-- Dynamic Category-Specific Specs -->
+      <div id="specsSection" style="display:none; background:#f9fafb; border:1px solid var(--border); border-radius: var(--radius); padding:1rem 1rem 0; margin-bottom:1rem;">
+        <p style="font-size:0.8rem; font-weight:600; color:var(--text-light); margin-bottom:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">⚙️ Technical Specifications</p>
+        <div id="specsFields"></div>
+      </div>
+
+      <!-- Location & City -->
+      <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <div class="form-group">
+          <label>City *</label>
+          <select id="equipCity" required style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);">
+            <option value="">Select City</option>
+            <option value="Mumbai">Mumbai</option>
+            <option value="Thane">Thane</option>
+            <option value="Navi Mumbai">Navi Mumbai</option>
+            <option value="Pune">Pune</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Bangalore">Bangalore</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Location / Area Name *</label>
+          <input type="text" id="equipLocation" placeholder="e.g. Andheri East, Mumbai" required style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+        </div>
+      </div>
+
+      <!-- GPS Location -->
+      <div class="form-group">
+        <label>GPS Coordinates</label>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <input type="text" id="equipLocDisplay" placeholder="Click to detect current location" readonly style="flex:1;cursor:pointer;background:#f9fafb;padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" onclick="detectLocation()" />
+          <button type="button" class="btn btn-outline btn-sm" onclick="detectLocation()" id="detectBtn" style="padding: 0.6rem 1rem;">📍 Detect</button>
+        </div>
+        <input type="hidden" id="equipLatitude" />
+        <input type="hidden" id="equipLongitude" />
+        <small style="color:var(--text-light); margin-top: 0.25rem; display: block;">Enables radius-based search for customers near you</small>
+      </div>
+
+      <!-- Description & Image -->
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="equipDesc" placeholder="Describe the condition, specifications, and details of the equipment..." style="width: 100%; height: 100px; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius); resize: vertical;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Image URL</label>
+        <input type="url" id="equipImageUrl" placeholder="https://example.com/image.jpg" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border); border-radius: var(--radius);" />
+      </div>
+
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <a href="/vendor-dashboard" class="btn" style="flex: 1; text-align: center; border: 1px solid var(--border);">Cancel</a>
+        <button type="submit" class="btn btn-primary" id="submitBtn" style="flex: 2;">List Equipment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/static/js/api.js"></script>
+<script>
+  const CATEGORY_SPECS = {
+    'Generators': [
+      { key: 'capacity_kva', label: 'Capacity (kVA)', type: 'number', placeholder: '62.5' },
+      { key: 'fuel_type', label: 'Fuel Type', type: 'select', options: ['Diesel', 'Petrol', 'Gas'] },
+      { key: 'sound_level_db', label: 'Sound Level (dB)', type: 'number', placeholder: '75' },
+      { key: 'phase', label: 'Phase', type: 'select', options: ['Single Phase', 'Three Phase'] },
+      { key: 'running_hours', label: 'Running Hours', type: 'number', placeholder: '500' },
+    ],
+    'Forklifts': [
+      { key: 'lifting_capacity_tons', label: 'Lifting Capacity (Tons)', type: 'number', placeholder: '3' },
+      { key: 'mast_height_m', label: 'Max Mast Height (m)', type: 'number', placeholder: '4.5' },
+      { key: 'fuel_type', label: 'Fuel Type', type: 'select', options: ['Diesel', 'Electric', 'LPG'] },
+    ],
+    'Excavators': [
+      { key: 'bucket_capacity_m3', label: 'Bucket Capacity (m³)', type: 'number', placeholder: '0.3' },
+      { key: 'operating_weight_tons', label: 'Operating Weight (Tons)', type: 'number', placeholder: '8' },
+      { key: 'digging_depth_m', label: 'Max Digging Depth (m)', type: 'number', placeholder: '5' },
+      { key: 'engine_hp', label: 'Engine Power (HP)', type: 'number', placeholder: '115' },
+    ],
+    'Backhoe Loaders': [
+      { key: 'bucket_capacity_m3', label: 'Bucket Capacity (m³)', type: 'number', placeholder: '0.17' },
+      { key: 'digging_depth_m', label: 'Digging Depth (m)', type: 'number', placeholder: '4.3' },
+      { key: 'engine_hp', label: 'Engine Power (HP)', type: 'number', placeholder: '74' },
+    ],
+    'Hydra Cranes': [
+      { key: 'lifting_capacity_tons', label: 'Lifting Capacity (Tons)', type: 'number', placeholder: '10' },
+      { key: 'boom_length_m', label: 'Max Boom Length (m)', type: 'number', placeholder: '18' },
+    ],
+    'Boom Lifts': [
+      { key: 'working_height_m', label: 'Working Height (m)', type: 'number', placeholder: '24' },
+      { key: 'platform_capacity_kg', label: 'Platform Capacity (kg)', type: 'number', placeholder: '230' },
+    ],
+    'Scissor Lifts': [
+      { key: 'working_height_m', label: 'Working Height (m)', type: 'number', placeholder: '12' },
+      { key: 'platform_capacity_kg', label: 'Platform Capacity (kg)', type: 'number', placeholder: '500' },
+    ],
+    'Air Compressors': [
+      { key: 'cfm', label: 'Capacity (CFM)', type: 'number', placeholder: '185' },
+      { key: 'pressure_psi', label: 'Pressure (PSI)', type: 'number', placeholder: '100' },
+      { key: 'fuel_type', label: 'Fuel Type', type: 'select', options: ['Diesel', 'Electric'] },
+    ],
+    'Water Pumps': [
+      { key: 'flow_rate_lpm', label: 'Flow Rate (LPM)', type: 'number', placeholder: '300' },
+      { key: 'head_m', label: 'Max Head (m)', type: 'number', placeholder: '25' },
+      { key: 'type', label: 'Pump Type', type: 'select', options: ['Submersible', 'Centrifugal', 'Dewatering'] },
+    ],
+    'Welding Machines': [
+      { key: 'amperage', label: 'Max Amperage (A)', type: 'number', placeholder: '400' },
+      { key: 'welding_type', label: 'Welding Type', type: 'select', options: ['Arc/MMA', 'MIG/MAG', 'TIG', 'Inverter'] },
+    ],
+    'Tower Lights': [
+      { key: 'lamps', label: 'Number of Lamps', type: 'number', placeholder: '4' },
+      { key: 'wattage', label: 'Wattage per Lamp (W)', type: 'number', placeholder: '1000' },
+      { key: 'mast_height_m', label: 'Mast Height (m)', type: 'number', placeholder: '9' },
+    ],
+    'Concrete Mixers': [
+      { key: 'drum_capacity_litres', label: 'Drum Capacity (Litres)', type: 'number', placeholder: '400' },
+      { key: 'fuel_type', label: 'Fuel Type', type: 'select', options: ['Diesel', 'Electric'] },
+    ],
+  };
+
+  function renderSpecsForm(categoryName) {
+    const section = document.getElementById('specsSection');
+    const fields = document.getElementById('specsFields');
+    const specs = CATEGORY_SPECS[categoryName];
+    if (!specs || specs.length === 0) {
+      section.style.display = 'none';
+      fields.innerHTML = '';
+      return;
+    }
+    const html = specs.map(spec => {
+      if (spec.type === 'select') {
+        return `<div class="form-group" style="margin-bottom:0.75rem;">
+          <label style="font-size:0.85rem;">${spec.label}</label>
+          <select id="spec_${spec.key}" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);">
+            <option value="">Select...</option>
+            ${spec.options.map(o => `<option value="${o}">${o}</option>`).join('')}
+          </select>
+        </div>`;
+      }
+      return `<div class="form-group" style="margin-bottom:0.75rem;">
+        <label style="font-size:0.85rem;">${spec.label}</label>
+        <input type="number" id="spec_${spec.key}" placeholder="${spec.placeholder}" step="any"
+          style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+      </div>`;
+    }).join('');
+    fields.innerHTML = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem 1rem;">${html}</div>`;
+    section.style.display = 'block';
+  }
+
+  function collectSpecs(categoryName) {
+    const specs = CATEGORY_SPECS[categoryName] || [];
+    const result = {};
+    specs.forEach(spec => {
+      const el = document.getElementById(`spec_${spec.key}`);
+      if (!el || el.value === '') return;
+      result[spec.key] = spec.type === 'number' ? parseFloat(el.value) : el.value;
+    });
+    return result;
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!isLoggedIn()) {
+      window.location.href = '/login';
+      return;
+    }
+    loadCategoryDropdown();
+  });
+
+  async function loadCategoryDropdown() {
+    try {
+      const response = await fetch('/api/categories/hierarchy');
+      const data = await response.json();
+      const select = document.getElementById('equipCategory');
+      let html = '<option value="">Select Category</option>';
+
+      if (data.categories) {
+        data.categories.forEach(cat => {
+          if (cat.subcategories && cat.subcategories.length > 0) {
+            html += `<optgroup label="${cat.name}">`;
+            cat.subcategories.forEach(sub => {
+              html += `<option value="${sub.id}" data-name="${sub.name}">${sub.name}</option>`;
+            });
+            html += `</optgroup>`;
+          } else {
+            html += `<option value="${cat.id}" data-name="${cat.name}">${cat.name}</option>`;
+          }
+        });
+      }
+      select.innerHTML = html;
+      select.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        renderSpecsForm(selected ? selected.getAttribute('data-name') : '');
+      });
+    } catch (err) {
+      console.error('Failed to load categories', err);
+    }
+  }
+
+  function detectLocation() {
+    const btn = document.getElementById('detectBtn');
+    const display = document.getElementById('equipLocDisplay');
+    if (!navigator.geolocation) {
+      display.value = 'Geolocation not supported';
+      return;
+    }
+    btn.textContent = '⏳ Detecting...';
+    btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        document.getElementById('equipLatitude').value = pos.coords.latitude;
+        document.getElementById('equipLongitude').value = pos.coords.longitude;
+        display.value = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        btn.textContent = '✅ Detected';
+        btn.disabled = false;
+      },
+      () => {
+        display.value = 'Detection failed. Please check permissions.';
+        btn.textContent = '📍 Detect';
+        btn.disabled = false;
+      }
+    );
+  }
+
+  async function saveEquipment(event) {
+    event.preventDefault();
+    clearAlert('formAlert');
+
+    const lat = parseFloat(document.getElementById('equipLatitude').value);
+    const lng = parseFloat(document.getElementById('equipLongitude').value);
+
+    const categorySelect = document.getElementById('equipCategory');
+    const categoryName = categorySelect.options[categorySelect.selectedIndex]?.getAttribute('data-name') || '';
+
+    const payload = {
+      category_id: parseInt(categorySelect.value),
+      name: document.getElementById('equipName').value,
+      brand: document.getElementById('equipBrand').value,
+      model: document.getElementById('equipModel').value,
+      daily_price: parseFloat(document.getElementById('equipPriceDay').value),
+      weekly_price: parseFloat(document.getElementById('equipPriceWeek').value) || 0,
+      monthly_price: parseFloat(document.getElementById('equipPriceMonth').value) || 0,
+      mobilization_fee: parseFloat(document.getElementById('equipMobFee').value) || 0,
+      demobilization_fee: parseFloat(document.getElementById('equipDemobFee').value) || 0,
+      total_quantity: parseInt(document.getElementById('equipQty').value) || 1,
+      city: document.getElementById('equipCity').value,
+      location: document.getElementById('equipLocation').value,
+      description: document.getElementById('equipDesc').value,
+      image_url: document.getElementById('equipImageUrl').value,
+      latitude: isNaN(lat) ? 0 : lat,
+      longitude: isNaN(lng) ? 0 : lng,
+      specs: collectSpecs(categoryName)
+    };
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Listing...';
+
+    try {
+      const token = localStorage.getItem('genrent_token');
+      const response = await fetch('/api/equipment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Failed to list equipment');
+      }
+
+      showToast('Equipment listed successfully!', 'success');
+      setTimeout(() => {
+        window.location.href = '/vendor-dashboard';
+      }, 1000);
+    } catch (err) {
+      showAlert('formAlert', err.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'List Equipment';
+    }
+  }
+</script>
+</body>
+</html>

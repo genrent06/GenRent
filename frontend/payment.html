@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment - GenRent</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    .payment-page { max-width: 520px; margin: 2rem auto; padding: 0 1rem; }
+    .payment-card { background: white; border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .payment-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .payment-subtitle { color: var(--text-light); font-size: 0.875rem; margin-bottom: 1.5rem; }
+    .amount-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius); padding: 1rem; margin-bottom: 1.5rem; text-align: center; }
+    .amount-box .amount-label { font-size: 0.8rem; color: #16a34a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .amount-box .amount-value { font-size: 2rem; font-weight: 800; color: #15803d; margin: 0.25rem 0; }
+    .amount-box .amount-note { font-size: 0.75rem; color: #6b7280; }
+    .breakdown { background: var(--bg); border-radius: var(--radius); padding: 1rem; margin-bottom: 1.5rem; }
+    .breakdown-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 0.3rem 0; }
+    .breakdown-row.total { font-weight: 700; border-top: 1px solid var(--border); margin-top: 0.3rem; padding-top: 0.6rem; }
+    .breakdown-row.split { color: #6b7280; font-size: 0.78rem; }
+    .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
+    .method-option { border: 2px solid var(--border); border-radius: var(--radius); padding: 0.875rem; cursor: pointer; text-align: center; transition: all 0.15s; }
+    .method-option:hover { border-color: var(--primary); background: #fff7ed; }
+    .method-option.selected { border-color: var(--primary); background: #fff7ed; }
+    .method-icon { font-size: 1.5rem; display: block; margin-bottom: 0.3rem; }
+    .method-name { font-size: 0.8rem; font-weight: 600; }
+    .upi-input { display: none; }
+    .upi-input.show { display: block; }
+    .secure-badge { display: flex; align-items: center; gap: 0.5rem; justify-content: center; color: #6b7280; font-size: 0.75rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Gen<span>Rent</span></span>
+    </a>
+    <div style="color:#6b7280;font-size:0.875rem;">🔒 Secure Payment</div>
+  </div>
+</nav>
+
+<div class="payment-page">
+  <div id="loadingState" style="text-align:center;padding:3rem;color:#6b7280;">Loading payment details...</div>
+
+  <div id="paymentContent" style="display:none;">
+    <div class="payment-card">
+      <div class="payment-title">Complete Your Booking</div>
+      <div class="payment-subtitle" id="bookingSummary">Pay 30% advance to confirm your booking</div>
+
+      <div class="amount-box">
+        <div class="amount-label">Advance Amount Due</div>
+        <div class="amount-value" id="advanceDisplay">₹0</div>
+        <div class="amount-note">30% of total rental amount</div>
+      </div>
+
+      <div class="breakdown">
+        <div class="breakdown-row">
+          <span>Total Rental Amount</span>
+          <span id="breakTotal"></span>
+        </div>
+        <div class="breakdown-row total">
+          <span>30% Advance (pay now)</span>
+          <span id="breakAdvance" style="color:var(--primary);"></span>
+        </div>
+        <div class="breakdown-row" style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px dashed var(--border);color:#6b7280;">
+          <span>Remaining (pay on delivery)</span>
+          <span id="breakRemaining"></span>
+        </div>
+      </div>
+
+      <div id="paymentAlert"></div>
+
+      <div style="font-weight:700;font-size:0.875rem;margin-bottom:0.75rem;">Select Payment Method</div>
+      <div class="method-grid">
+        <div class="method-option" onclick="selectMethod('upi', this)">
+          <span class="method-icon">📱</span>
+          <div class="method-name">UPI</div>
+          <div style="font-size:0.7rem;color:#6b7280;">GPay, PhonePe, Paytm</div>
+        </div>
+        <div class="method-option" onclick="selectMethod('card', this)">
+          <span class="method-icon">💳</span>
+          <div class="method-name">Card</div>
+          <div style="font-size:0.7rem;color:#6b7280;">Credit / Debit</div>
+        </div>
+        <div class="method-option" onclick="selectMethod('netbanking', this)">
+          <span class="method-icon">🏦</span>
+          <div class="method-name">Net Banking</div>
+          <div style="font-size:0.7rem;color:#6b7280;">All major banks</div>
+        </div>
+        <div class="method-option" onclick="selectMethod('cash', this)">
+          <span class="method-icon">💵</span>
+          <div class="method-name">Cash on Delivery</div>
+          <div style="font-size:0.7rem;color:#6b7280;">Pay in person</div>
+        </div>
+      </div>
+
+      <!-- UPI ID input -->
+      <div id="upiSection" class="upi-input form-group">
+        <label>UPI ID</label>
+        <input type="text" id="upiId" placeholder="yourname@upi" />
+      </div>
+
+      <!-- Card inputs -->
+      <div id="cardSection" class="upi-input">
+        <div class="form-group">
+          <label>Card Number</label>
+          <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCard(this)" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Expiry</label>
+            <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5" />
+          </div>
+          <div class="form-group">
+            <label>CVV</label>
+            <input type="text" id="cardCvv" placeholder="123" maxlength="3" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Name on Card</label>
+          <input type="text" id="cardName" placeholder="As printed on card" />
+        </div>
+      </div>
+
+      <!-- Net Banking -->
+      <div id="netbankingSection" class="upi-input form-group">
+        <label>Select Bank</label>
+        <select id="bankSelect">
+          <option value="">Choose your bank</option>
+          <option>SBI</option>
+          <option>HDFC Bank</option>
+          <option>ICICI Bank</option>
+          <option>Axis Bank</option>
+          <option>Kotak Mahindra</option>
+          <option>Punjab National Bank</option>
+          <option>Bank of Baroda</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg" id="payBtn" onclick="processPayment()" style="margin-top:0.5rem;" disabled>
+        Pay Now
+      </button>
+
+      <div class="secure-badge">
+        🔒 Payments are 256-bit SSL encrypted and secure
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:1rem;">
+      <a href="javascript:history.back()" style="color:var(--text-light);font-size:0.85rem;">← Go back</a>
+    </div>
+  </div>
+
+  <div id="successState" style="display:none;">
+    <div class="payment-card" style="text-align:center;padding:3rem 2rem;">
+      <div style="font-size:3rem;margin-bottom:1rem;">✅</div>
+      <div style="font-size:1.25rem;font-weight:800;margin-bottom:0.5rem;">Payment Successful!</div>
+      <div style="color:#6b7280;margin-bottom:1.5rem;" id="successMsg">Your advance has been paid successfully.</div>
+      <div style="background:var(--bg);border-radius:var(--radius);padding:1rem;margin-bottom:1.5rem;text-align:left;">
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.4rem;">
+          <span style="color:#6b7280;">Transaction ID</span>
+          <span id="txnId" style="font-weight:600;font-family:monospace;"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+          <span style="color:#6b7280;">Amount Paid</span>
+          <span id="paidAmount" style="font-weight:600;color:#16a34a;"></span>
+        </div>
+      </div>
+      <a href="/" class="btn btn-primary btn-block">Back to Home</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/payment.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - GenRent</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Gen<span>Rent</span></span>
+    </a>
+    <div class="navbar-actions">
+      <span style="color:#9ca3af;font-size:0.9rem;">Already registered?</span>
+      <a href="/login" class="btn btn-outline btn-sm">Login</a>
+    </div>
+  </div>
+</nav>
+
+<div class="auth-page">
+  <div class="auth-card" style="max-width:520px;">
+    <h2>Create Account</h2>
+    <p>Join GenRent — India's equipment rental marketplace</p>
+
+    <div id="alertBox"></div>
+
+    <!-- Role Selector -->
+    <div class="form-group">
+      <label>I want to:</label>
+      <div class="role-selector">
+        <label class="role-option active" id="roleCustomer">
+          <input type="radio" name="role" value="customer" checked onchange="setRole('customer')" />
+          <div class="role-icon">🏢</div>
+          <div class="role-label">Rent Equipment</div>
+          <div style="font-size:0.7rem;color:var(--text-light);margin-top:0.2rem;">I'm a customer</div>
+        </label>
+        <label class="role-option" id="roleVendor">
+          <input type="radio" name="role" value="vendor" onchange="setRole('vendor')" />
+          <div class="role-icon">⚡</div>
+          <div class="role-label">List My Equipment</div>
+          <div style="font-size:0.7rem;color:var(--text-light);margin-top:0.2rem;">I'm a vendor</div>
+        </label>
+      </div>
+    </div>
+
+    <form id="registerForm" onsubmit="handleRegister(event)">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" placeholder="Sangam Singh" required />
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" placeholder="+91 98765 43210" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Minimum 6 characters" required minlength="6" />
+        <div class="form-hint">At least 6 characters</div>
+      </div>
+
+      <input type="hidden" id="selectedRole" value="customer" />
+
+      <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerBtn">
+        Create Account
+      </button>
+    </form>
+
+    <p style="text-align:center;margin-top:1.5rem;font-size:0.875rem;color:var(--text-light);">
+      Already have an account? <a href="/login">Login here</a>
+    </p>
+    <p style="text-align:center;margin-top:0.5rem;font-size:0.875rem;color:var(--text-light);">
+      <a href="/">← Back to Home</a>
+    </p>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/auth.js"></script>
+<script>
+  // Pre-select role from URL param
+  const urlRole = new URLSearchParams(window.location.search).get('role');
+  if (urlRole === 'vendor') {
+    setRole('vendor');
+    document.querySelector('input[value="vendor"]').checked = true;
+  }
+</script>
+</body>
+</html>

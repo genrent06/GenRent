@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Bookings - GenRent</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    .bookings-container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+    .booking-card-full {
+      background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow);
+      border: 1px solid var(--border); margin-bottom: 1.5rem; overflow: hidden;
+    }
+    .booking-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 1.5rem; background: var(--bg); border-bottom: 1px solid var(--border);
+      flex-wrap: wrap; gap: 0.5rem;
+    }
+    .booking-body { padding: 1.5rem; }
+    .booking-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+    .booking-meta-item { font-size: 0.85rem; }
+    .booking-meta-item .label { color: var(--text-light); margin-bottom: 0.2rem; }
+    .booking-meta-item .value { font-weight: 600; }
+    .booking-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+    .progress-steps {
+      display: flex; gap: 0; margin: 1rem 0; overflow-x: auto;
+    }
+    .progress-step {
+      flex: 1; min-width: 80px; text-align: center; font-size: 0.7rem; position: relative;
+      padding: 0.5rem 0.25rem;
+    }
+    .progress-step .step-dot {
+      width: 28px; height: 28px; border-radius: 50%; margin: 0 auto 0.3rem;
+      display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
+      background: #e5e7eb; color: #9ca3af; font-weight: 700; position: relative; z-index: 1;
+    }
+    .progress-step.done .step-dot { background: #22c55e; color: white; }
+    .progress-step.active .step-dot { background: var(--primary); color: white; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+    .progress-step.cancelled .step-dot { background: #ef4444; color: white; }
+    .progress-step::before {
+      content: ''; position: absolute; top: 19px; left: 0; right: 50%;
+      height: 2px; background: #e5e7eb;
+    }
+    .progress-step:first-child::before { display: none; }
+    .progress-step.done::before { background: #22c55e; }
+    .otp-section {
+      background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius);
+      padding: 1.25rem; margin-top: 1rem;
+    }
+    .otp-section h4 { color: #16a34a; margin-bottom: 0.75rem; font-size: 1rem; }
+    .otp-input {
+      display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    }
+    .otp-input input {
+      width: 120px; font-size: 1.5rem; letter-spacing: 0.3em; text-align: center;
+      padding: 0.5rem; border: 2px solid #86efac; border-radius: var(--radius);
+    }
+    .review-section {
+      background: #fefce8; border: 1px solid #fde047; border-radius: var(--radius);
+      padding: 1.25rem; margin-top: 1rem;
+    }
+    .star-rating { display: flex; gap: 0.25rem; margin: 0.5rem 0; }
+    .star-rating span {
+      font-size: 1.8rem; cursor: pointer; color: #e5e7eb; transition: color 0.15s;
+    }
+    .star-rating span.active { color: #f59e0b; }
+    .empty-state { text-align: center; padding: 4rem 1rem; color: var(--text-light); }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .info-box {
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius);
+      padding: 1rem; margin-top: 1rem; font-size: 0.85rem; color: #1d4ed8;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Gen<span>Rent</span></span>
+    </a>
+    <div class="navbar-actions">
+    <a href="/" class="btn btn-outline btn-sm">Browse Equipment</a>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="bookings-container">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <div>
+      <h1 style="font-size:1.5rem;font-weight:800;">My Bookings</h1>
+      <p style="color:var(--text-light);font-size:0.875rem;">Track and manage your equipment rental bookings</p>
+    </div>
+    <a href="/" class="btn btn-primary btn-sm">+ New Booking</a>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <div id="bookingsAlert"></div>
+  <div id="loadingState" style="text-align:center;padding:3rem;color:#6b7280;">Loading your bookings...</div>
+  <div id="bookingsList"></div>
+</div>
+
+<!-- DAMAGE DISPUTE MODAL -->
+<div class="modal-overlay hidden" id="disputeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚠️ Raise Damage Dispute</div>
+      <button class="modal-close" onclick="closeDisputeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="disputeAlert"></div>
+      <form id="disputeForm" onsubmit="submitDamageDisputeForm(); return false;">
+        <input type="hidden" id="disputeBookingId" />
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.875rem;">Describe the damage in detail *</label>
+          <textarea id="disputeDescription" placeholder="Explain what is damaged, how/when it happened (min 10 characters)..." required minlength="10" rows="3" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;box-sizing:border-box;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.875rem;">Claimed Damage Amount (₹) <small style="font-weight:normal;color:var(--text-light);">(Enter 0 if unknown)</small></label>
+          <input type="number" id="disputeAmount" placeholder="0" min="0" value="0" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:var(--radius);box-sizing:border-box;" />
+        </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="display:block;margin-bottom:0.4rem;font-weight:600;font-size:0.875rem;">Evidence Photo URL(s) <small style="font-weight:normal;color:var(--text-light);">(comma-separated, optional)</small></label>
+          <input type="text" id="disputePhotoUrls" placeholder="https://example.com/damage1.jpg, https://example.com/damage2.jpg" style="width:100%;padding:0.5rem;border:1.5px solid var(--border);border-radius:var(--radius);box-sizing:border-box;" />
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="border:1px solid var(--border);" onclick="closeDisputeModal()">Cancel</button>
+      <button class="btn btn-danger" id="submitDisputeBtn" onclick="submitDamageDisputeForm()">Raise Dispute</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/my-bookings.js"></script>
+</body>
+</html>

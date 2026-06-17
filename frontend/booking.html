@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Equipment Details - GenRent</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Gen<span>Rent</span></span>
+    </a>
+    <div class="navbar-actions" id="navActions">
+      <a href="/login" class="btn btn-outline btn-sm">Login</a>
+      <a href="/register" class="btn btn-primary btn-sm">Register</a>
+    </div>
+  </div>
+</nav>
+
+<div id="loadingState" style="text-align:center;padding:4rem;color:#6b7280;">Loading equipment details...</div>
+
+<div id="detailContent" style="display:none;">
+  <div class="detail-grid">
+    <!-- Left Side -->
+    <div>
+      <div class="detail-image" id="genImage">⚡</div>
+
+      <div style="background:white;border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:1.5rem;">
+        <h1 id="genName" style="font-size:1.5rem;font-weight:800;margin-bottom:0.5rem;"></h1>
+        <p id="genVendor" style="color:var(--text-light);margin-bottom:1rem;"></p>
+
+        <div class="card-meta" id="genMeta"></div>
+
+        <div id="genDescription" style="color:var(--text-light);font-size:0.9rem;line-height:1.7;margin-top:1rem;"></div>
+      </div>
+
+      <div style="background:white;border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow);border:1px solid var(--border);">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">About the Vendor</h3>
+        <div id="vendorInfo"></div>
+      </div>
+    </div>
+
+    <!-- Right Side: Booking -->
+    <div>
+      <div class="booking-card">
+        <div class="price-display" id="priceDisplay"></div>
+        <div id="bookingAlert"></div>
+
+        <div id="bookingForm">
+          <div class="form-group">
+            <label>Delivery Address</label>
+            <textarea id="bookAddress" placeholder="Enter full delivery address..." rows="3" required></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Start Date</label>
+              <input type="date" id="startDate" required />
+            </div>
+            <div class="form-group">
+              <label>End Date</label>
+              <input type="date" id="endDate" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Notes (Optional)</label>
+            <input type="text" id="bookNotes" placeholder="Any special requirements..." />
+          </div>
+
+          <div id="priceCalc" style="background:var(--bg);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;display:none;">
+            <div style="display:flex;justify-content:space-between;font-size:0.875rem;margin-bottom:0.5rem;">
+              <span id="calcDays"></span>
+              <span id="calcAmount"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--border);padding-top:0.5rem;margin-top:0.5rem;">
+              <span>Total Rental</span>
+              <span id="calcTotal" style="color:var(--primary);"></span>
+            </div>
+            <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--radius);padding:0.75rem;margin-top:0.75rem;">
+              <div style="font-weight:700;font-size:0.875rem;color:#c2410c;margin-bottom:0.4rem;">💳 Advance Payment Required</div>
+              <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem;">
+                <span style="color:#6b7280;">30% Advance (pay now)</span>
+                <span id="calcAdvance" style="font-weight:600;color:#c2410c;"></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#9ca3af;margin-bottom:0.1rem;">
+                <span>→ Vendor receives (15%)</span>
+                <span id="calcVendorShare"></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#9ca3af;">
+                <span>→ Platform fee (15%)</span>
+                <span id="calcPlatformFee"></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-top:0.5rem;padding-top:0.5rem;border-top:1px dashed #fed7aa;">
+                <span style="color:#6b7280;">Remaining (pay on delivery)</span>
+                <span id="calcRemaining" style="font-weight:600;"></span>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" id="bookBtn" onclick="submitBooking()">
+            Request Booking →
+          </button>
+          <p style="text-align:center;font-size:0.75rem;color:var(--text-light);margin-top:0.75rem;">
+            Vendor reviews and accepts first. Pay 30% advance after acceptance.
+          </p>
+        </div>
+
+        <div id="loginPrompt" style="display:none;text-align:center;padding:1rem;">
+          <p style="margin-bottom:1rem;color:var(--text-light);">Login to book this equipment</p>
+          <a href="/login" class="btn btn-primary btn-block">Login to Book</a>
+          <a href="/register" class="btn btn-outline btn-block" style="margin-top:0.5rem;border-color:var(--border);color:var(--text);">Create Account</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/booking.js"></script>
+</body>
+</html>

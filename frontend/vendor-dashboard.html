@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vendor Dashboard - GenRent</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">Gen<span>Rent</span></span>
+    </a>
+    <div style="color:#9ca3af;font-size:0.875rem;" id="vendorName">Vendor Dashboard</div>
+    <div class="navbar-actions">
+      <a href="/" class="btn btn-outline btn-sm">View Site</a>
+      <button class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Menu</div>
+    <ul class="sidebar-nav">
+      <li><a href="#" class="active" onclick="showSection('overview')" id="nav-overview">
+        <span class="nav-icon">📊</span> Overview
+      </a></li>
+      <li><a href="#" onclick="showSection('generators')" id="nav-generators">
+        <span class="nav-icon">🔧</span> My Equipment
+      </a></li>
+      <li><a href="#" onclick="showSection('bookings')" id="nav-bookings">
+        <span class="nav-icon">📋</span> Bookings
+      </a></li>
+      <li><a href="#" onclick="showSection('wallet')" id="nav-wallet">
+        <span class="nav-icon">💰</span> Wallet
+      </a></li>
+      <li><a href="#" onclick="showSection('profile')" id="nav-profile">
+        <span class="nav-icon">🏢</span> Company Profile
+      </a></li>
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- OVERVIEW -->
+    <div id="section-overview">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Overview</div>
+          <div class="page-subtitle">Welcome back! Here's your business summary.</div>
+        </div>
+      </div>
+
+      <div id="setupBanner" style="display:none;" class="alert alert-info">
+        ⚡ Complete your vendor profile to start receiving bookings.
+        <a href="#" onclick="showSection('profile')" style="font-weight:700;margin-left:0.5rem;">Setup Now →</a>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card orange">
+          <div class="stat-card-label">Total Equipment</div>
+          <div class="stat-card-value" id="statTotalGen">0</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-card-label">Available Equipment</div>
+          <div class="stat-card-value" id="statAvailGen">0</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-card-label">Pending Bookings</div>
+          <div class="stat-card-value" id="statPendingBook">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">Total Bookings</div>
+          <div class="stat-card-value" id="statTotalBook">0</div>
+        </div>
+      </div>
+
+      <!-- Recent Bookings -->
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Recent Bookings</div>
+          <button class="btn btn-sm" style="border:1px solid var(--border);" onclick="showSection('bookings')">View All</button>
+        </div>
+        <div id="recentBookings">
+          <div style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EQUIPMENT -->
+    <div id="section-generators" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">My Equipment</div>
+          <div class="page-subtitle">Manage your equipment listings and operations</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddEquipment()">+ Add Equipment</button>
+      </div>
+
+      <div id="equipmentStats" class="vendor-stats-grid" style="display:none;">
+        <div class="vendor-stat-card total">
+          <div class="stat-label">Total Equipment</div>
+          <div class="stat-value" id="statTotalEquip">0</div>
+        </div>
+        <div class="vendor-stat-card active">
+          <div class="stat-label">Active</div>
+          <div class="stat-value" id="statActiveEquip">0</div>
+        </div>
+        <div class="vendor-stat-card revenue">
+          <div class="stat-label">This Month Revenue</div>
+          <div class="stat-value" id="statMonthRevenue">₹0</div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="equipment-operations-table">
+          <thead>
+            <tr>
+              <th>Equipment Name</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Bookings</th>
+              <th>Revenue</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="equipmentTableBody">
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BOOKINGS -->
+    <div id="section-bookings" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Bookings</div>
+          <div class="page-subtitle">Manage customer booking requests</div>
+        </div>
+        <select id="bookingFilter" onchange="loadBookings()" style="padding:0.5rem 1rem;border:1px solid var(--border);border-radius:var(--radius);font-size:0.875rem;">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="delivered">Delivered</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#ID</th>
+              <th>Customer</th>
+              <th>Equipment</th>
+              <th>Dates</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTableBody">
+            <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WALLET -->
+    <div id="section-wallet" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">My Wallet</div>
+          <div class="page-subtitle">Earnings from advance payments</div>
+        </div>
+      </div>
+
+      <!-- Balance Cards Row -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
+        <div style="background:linear-gradient(135deg,#f97316,#ea580c);border-radius:var(--radius-lg);padding:1.5rem;color:white;box-shadow:var(--shadow);">
+          <div style="font-size:0.8rem;opacity:0.85;margin-bottom:0.25rem;">Available Balance</div>
+          <div style="font-size:2rem;font-weight:800;" id="walletBalance">₹0</div>
+          <div style="font-size:0.72rem;opacity:0.75;margin-top:0.25rem;">Ready to withdraw</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:var(--radius-lg);padding:1.5rem;color:white;box-shadow:var(--shadow);">
+          <div style="font-size:0.8rem;opacity:0.85;margin-bottom:0.25rem;">🔒 Escrow Hold</div>
+          <div style="font-size:2rem;font-weight:800;" id="walletHoldBalance">₹0</div>
+          <div style="font-size:0.72rem;opacity:0.75;margin-top:0.25rem;">Released on OTP confirmation</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);border-radius:var(--radius-lg);padding:1.5rem;color:white;box-shadow:var(--shadow);">
+          <div style="font-size:0.8rem;opacity:0.85;margin-bottom:0.25rem;">⏳ Pending Payout</div>
+          <div style="font-size:2rem;font-weight:800;" id="walletWithdrawalHold">₹0</div>
+          <div style="font-size:0.72rem;opacity:0.75;margin-top:0.25rem;">Awaiting admin approval</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.5rem;align-items:start;">
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+
+          <!-- Saved Bank Accounts -->
+          <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+              <div style="font-weight:700;">🏦 Bank Accounts</div>
+              <button class="btn btn-sm btn-primary" onclick="showAddBankForm()">+ Add</button>
+            </div>
+            <div id="bankAccountsList"><div style="color:var(--text-light);font-size:0.875rem;">Loading...</div></div>
+            <!-- Add bank account form (hidden by default) -->
+            <div id="addBankForm" style="display:none;margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem;">
+              <div style="font-size:0.875rem;font-weight:600;margin-bottom:0.75rem;">Add New Account</div>
+              <div id="bankFormAlert"></div>
+              <div class="form-group">
+                <input type="text" id="newBankName" placeholder="Bank name (e.g. HDFC Bank)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+              </div>
+              <div class="form-group">
+                <input type="text" id="newAccountName" placeholder="Account holder name" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+              </div>
+              <div class="form-group">
+                <input type="text" id="newAccountNo" placeholder="Account number" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+              </div>
+              <div class="form-group">
+                <input type="text" id="newIFSC" placeholder="IFSC code" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+              </div>
+              <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;margin-bottom:0.75rem;cursor:pointer;">
+                <input type="checkbox" id="newIsPrimary" /> Set as primary account
+              </label>
+              <div style="display:flex;gap:0.5rem;">
+                <button class="btn btn-primary" style="flex:1;" onclick="saveBankAccount()">Save</button>
+                <button class="btn" onclick="hideAddBankForm()">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Withdraw Card -->
+          <div style="background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow);">
+            <div style="font-weight:700;margin-bottom:0.25rem;">💸 Request Withdrawal</div>
+            <div style="font-size:0.78rem;color:var(--text-light);margin-bottom:1rem;">Min ₹1,000 · Max ₹50,000/day · 1 request/hour</div>
+            <div id="withdrawAlert"></div>
+
+            <!-- Step 1: Amount + Bank Account -->
+            <div id="withdrawStep1">
+              <div class="form-group">
+                <label>Select Bank Account</label>
+                <select id="withdrawBankAccountId" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);">
+                  <option value="">— select account —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Amount (₹)</label>
+                <input type="number" id="withdrawAmount" placeholder="Minimum ₹1,000" min="1000" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+              </div>
+              <button class="btn btn-primary" style="width:100%;" onclick="requestWithdrawal()">Send OTP & Confirm</button>
+            </div>
+
+            <!-- Step 2: OTP Verification -->
+            <div id="withdrawStep2" style="display:none;">
+              <div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:0.75rem;margin-bottom:1rem;font-size:0.8rem;color:#92400e;">
+                OTP sent to your email. Enter it below to confirm the withdrawal.
+              </div>
+              <div class="form-group">
+                <label>6-digit OTP</label>
+                <input type="text" id="withdrawOTP" maxlength="6" placeholder="000000"
+                  oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                  style="width:100%;padding:0.6rem;border:1px solid var(--border);border-radius:var(--radius);font-size:1.25rem;letter-spacing:0.5rem;text-align:center;" />
+              </div>
+              <div style="display:flex;gap:0.5rem;">
+                <button class="btn btn-primary" style="flex:1;" onclick="confirmWithdrawalOTP()">Confirm</button>
+                <button class="btn" onclick="cancelWithdrawalOTP()">Cancel</button>
+              </div>
+              <p style="font-size:0.72rem;color:#6b7280;margin-top:0.5rem;text-align:center;">OTP expires in 10 minutes</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:1.5rem;">
+          <div class="table-card">
+            <div class="table-header">
+              <div class="table-title">Transaction History</div>
+            </div>
+            <div id="walletTransactions">
+              <div style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</div>
+            </div>
+          </div>
+          <div class="table-card">
+            <div class="table-header">
+              <div class="table-title">Withdrawal Requests</div>
+            </div>
+            <div id="withdrawalHistory">
+              <div style="text-align:center;padding:2rem;color:var(--text-light);">Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="section-profile" style="display:none;">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Company Profile</div>
+          <div class="page-subtitle">Your vendor profile visible to customers</div>
+        </div>
+      </div>
+
+      <div style="background:white;border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow);border:1px solid var(--border);max-width:600px;">
+        <div id="profileAlert"></div>
+        <form id="vendorProfileForm" onsubmit="saveVendorProfile(event)">
+          <div class="form-group">
+            <label>Company Name *</label>
+            <input type="text" id="companyName" placeholder="ABC Power Solutions" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>City *</label>
+              <select id="vendorCity" required>
+                <option value="">Select City</option>
+                <option value="Mumbai">Mumbai</option>
+                <option value="Thane">Thane</option>
+                <option value="Navi Mumbai">Navi Mumbai</option>
+                <option value="Pune">Pune</option>
+                <option value="Delhi">Delhi</option>
+                <option value="Bangalore">Bangalore</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input type="tel" id="vendorPhone" placeholder="+91 98765 43210" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <input type="text" id="vendorAddress" placeholder="Full address" />
+          </div>
+          <div class="form-group">
+            <label>Company Description</label>
+            <textarea id="vendorDescription" placeholder="Tell customers about your company, experience, service areas..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Business Location</label>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <input type="text" id="vendorLocationDisplay" placeholder="Click to detect location" readonly style="flex:1;cursor:pointer;background:#f9fafb;" onclick="captureVendorLocation()" />
+              <button type="button" class="btn btn-outline btn-sm" onclick="captureVendorLocation()" id="vendorLocBtn">📍 Detect</button>
+            </div>
+            <input type="hidden" id="vendorLatitude" />
+            <input type="hidden" id="vendorLongitude" />
+            <small style="color:var(--text-light);">Used so customers nearby can find you (within 5–25 km radius)</small>
+          </div>
+          <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Profile</button>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ADD/EDIT GENERATOR MODAL -->
+<div class="modal-overlay hidden" id="generatorModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Equipment</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalAlert"></div>
+      <form id="generatorForm" onsubmit="saveGenerator(event)">
+        <input type="hidden" id="generatorId" />
+        <div class="form-group">
+          <label>Equipment Name *</label>
+          <input type="text" id="genName" placeholder="e.g. Kirloskar 50kVA Silent DG" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Capacity (kVA) *</label>
+            <input type="number" id="genCapacity" placeholder="50" required min="1" />
+          </div>
+          <div class="form-group">
+            <label>Brand</label>
+            <input type="text" id="genBrand" placeholder="Kirloskar, Cummins, etc." />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Price / Day (₹) *</label>
+            <input type="number" id="genPriceDay" placeholder="1500" required min="1" />
+          </div>
+          <div class="form-group">
+            <label>Price / Month (₹)</label>
+            <input type="number" id="genPriceMonth" placeholder="30000" min="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fuel Type</label>
+            <select id="genFuel">
+              <option value="diesel">Diesel</option>
+              <option value="petrol">Petrol</option>
+              <option value="gas">Gas</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>City *</label>
+            <select id="genCity" required>
+              <option value="">Select City</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Thane">Thane</option>
+              <option value="Navi Mumbai">Navi Mumbai</option>
+              <option value="Pune">Pune</option>
+              <option value="Delhi">Delhi</option>
+              <option value="Bangalore">Bangalore</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Location / Area *</label>
+          <input type="text" id="genLocation" placeholder="e.g. Andheri West, Mumbai" required />
+        </div>
+        <div class="form-group">
+          <label>Equipment GPS Location</label>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <input type="text" id="genLocationDisplay" placeholder="Click to detect current location" readonly style="flex:1;cursor:pointer;background:#f9fafb;" onclick="captureGenLocation()" />
+            <button type="button" class="btn btn-outline btn-sm" onclick="captureGenLocation()" id="genLocBtn">📍 Detect</button>
+          </div>
+          <input type="hidden" id="genLatitude" />
+          <input type="hidden" id="genLongitude" />
+          <small style="color:var(--text-light);">Helps customers search equipment near their area</small>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="genDesc" placeholder="Silent generator, includes fuel tank, operator available..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="border:1px solid var(--border);" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="document.getElementById('generatorForm').dispatchEvent(new Event('submit'))" id="saveGenBtn">Save Equipment</button>
+    </div>
+  </div>
+</div>
+
+<!-- HANDOVER MODAL -->
+<div class="modal-overlay hidden" id="handoverModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="handoverModalTitle">📷 Upload Handover</div>
+      <button class="modal-close" onclick="closeHandoverModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Photo URL(s) * <small style="color:var(--text-light); font-weight:normal;">(comma-separated)</small></label>
+        <input type="text" id="handoverPhotoUrls" placeholder="https://example.com/photo1.jpg, https://example.com/photo2.jpg" required />
+      </div>
+      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div class="form-group">
+          <label>Condition</label>
+          <select id="handoverCondition">
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+            <option value="Needs Repair">Needs Repair</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Accessories Present</label>
+          <select id="handoverAccessories">
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+            <option value="Partial">Partial</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+        <div class="form-group">
+          <label>Fuel Level</label>
+          <select id="handoverFuelLevel">
+            <option value="Full">Full</option>
+            <option value="Half">Half</option>
+            <option value="Quarter">Quarter</option>
+            <option value="Empty">Empty</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Hours Meter Reading</label>
+          <input type="text" id="handoverHoursMeter" placeholder="e.g. 1245.5" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes / Observations</label>
+        <textarea id="handoverNotes" placeholder="Any existing scratches, custom agreements, etc."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" style="border:1px solid var(--border);" onclick="closeHandoverModal()">Cancel</button>
+      <button class="btn btn-primary" id="submitHandoverBtn" onclick="submitHandover()">Upload Handover</button>
+    </div>
+  </div>
+</div>
+
+<!-- RETURN OTP MODAL -->
+<div class="modal-overlay hidden" id="returnOTPModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">🔐 Confirm Return OTP</div>
+      <button class="modal-close" onclick="closeReturnOTPModal()">&times;</button>
+    </div>
+    <div class="modal-body" style="text-align:center;">
+      <p style="font-size:0.875rem; color:var(--text-light); margin-bottom:1rem;">
+        Ask the customer for the 6-digit Return OTP sent to their dashboard/notification.
+      </p>
+      <div class="form-group">
+        <input type="text" id="returnOTPInput" maxlength="6" placeholder="000000"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+          style="font-size:1.75rem; letter-spacing:0.4em; text-align:center; padding:0.6rem; width:180px; margin:0 auto; display:block; border:2px solid var(--border); border-radius:var(--radius); margin-bottom: 0.5rem;" />
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:center;">
+      <button class="btn" style="border:1px solid var(--border);" onclick="closeReturnOTPModal()">Cancel</button>
+      <button class="btn btn-primary" id="submitReturnOTPBtn" onclick="submitReturnOTP()">Confirm Return</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="/static/js/api.js?v=2"></script>
+<script src="/static/js/vendor.js?v=2"></script>
+<script src="/static/js/vendor-equipment.js"></script>
+</body>
+</html>
