@@ -8,22 +8,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	razorpay "github.com/razorpay/razorpay-go"
 )
 
 // RazorpayService implements PaymentGateway interface for Razorpay
 type RazorpayService struct {
-	keyID           string
-	keySecret       string
-	webhookSecret   string
-	testMode        bool
-	paymentTimeout  int // in seconds
-}
-
-// RazorpayClient represents the HTTP client interface for Razorpay
-type RazorpayClient interface {
-	CreateOrder(orderData map[string]interface{}) ([]byte, error)
-	FetchPayment(paymentID string) ([]byte, error)
-	ProcessRefund(paymentID string, refundData map[string]interface{}) ([]byte, error)
+	client         *razorpay.Client
+	keyID          string
+	keySecret      string
+	webhookSecret  string
+	testMode       bool
+	paymentTimeout int // in seconds
 }
 
 // NewRazorpayService creates a new Razorpay service instance
@@ -33,10 +29,11 @@ func NewRazorpayService(keyID, keySecret, webhookSecret string, testMode bool, t
 	}
 
 	return &RazorpayService{
-		keyID:          keyID,
-		keySecret:      keySecret,
-		webhookSecret:  webhookSecret,
-		testMode:       testMode,
+		client:        razorpay.NewClient(keyID, keySecret),
+		keyID:         keyID,
+		keySecret:     keySecret,
+		webhookSecret: webhookSecret,
+		testMode:      testMode,
 		paymentTimeout: timeout,
 	}
 }
@@ -53,24 +50,50 @@ func (r *RazorpayService) CreateOrder(ctx context.Context, req CreateOrderReques
 		"receipt":         fmt.Sprintf("booking_%d", req.BookingID),
 		"payment_capture": 1, // Auto capture
 		"notes": map[string]string{
-			"booking_id":  fmt.Sprintf("%d", req.BookingID),
-			"customer_id": fmt.Sprintf("%d", req.CustomerID),
-			"customer_email": req.CustomerEmail,
+			"booking_id":      fmt.Sprintf("%d", req.BookingID),
+			"customer_id":     fmt.Sprintf("%d", req.CustomerID),
+			"customer_email":  req.CustomerEmail,
+			"customer_name":   req.CustomerName,
+			"customer_phone":  req.CustomerPhone,
 		},
-		// Add expiration (Razorpay orders are valid for a specific time)
-		"expires_at": time.Now().Add(time.Duration(r.paymentTimeout) * time.Second).Unix(),
 	}
 
-	// In production, send orderData to Razorpay API
-	// For now, we'll simulate the order creation
-	_ = orderData // Will be used in production
+	// Call Razorpay API to create order
+	response, err := r.client.Order.Create(orderData, nil)
+	if err != nil {
+		// Log error for debugging
+		if r.testMode {
+			// In test mode, return simulated response on API error
+			return r.createSimulatedOrder(req, amountInPaise)
+		}
+		return nil, ErrOrderCreationFailed(err)
+	}
+
+	// Extract order ID from response
+	orderID, ok := response["id"].(string)
+	if !ok {
+		return nil, ErrAPIError("order creation", fmt.Errorf("missing order id in response"))
+	}
+
+	amount := float64(amountInPaise) / 100
+
+	return &OrderResponse{
+		OrderID:    orderID,
+		Amount:     amount,
+		Currency:   "INR",
+		KeyID:      r.keyID,
+		ExpiresAt:  time.Now().Add(time.Duration(r.paymentTimeout) * time.Second).Unix(),
+	}, nil
+}
+
+// createSimulatedOrder creates a simulated order for test mode
+func (r *RazorpayService) createSimulatedOrder(req CreateOrderRequest, amountInPaise int) (*OrderResponse, error) {
 	orderID := fmt.Sprintf("order_%d_%d", req.BookingID, time.Now().Unix())
 
 	return &OrderResponse{
 		OrderID:    orderID,
 		Amount:     req.Amount,
 		Currency:   "INR",
-		PaymentURL: fmt.Sprintf("https://api.razorpay.com/v1/checkout/%s", orderID),
 		KeyID:      r.keyID,
 		ExpiresAt:  time.Now().Add(time.Duration(r.paymentTimeout) * time.Second).Unix(),
 	}, nil
@@ -78,21 +101,62 @@ func (r *RazorpayService) CreateOrder(ctx context.Context, req CreateOrderReques
 
 // VerifyPayment verifies payment status from Razorpay
 func (r *RazorpayService) VerifyPayment(ctx context.Context, paymentID string) (*PaymentDetails, error) {
-	// In production, fetch from Razorpay API
-	// For now, simulate verification
-
-	paymentDetails := &PaymentDetails{
-		PaymentID: paymentID,
-		OrderID:   fmt.Sprintf("order_%s", paymentID),
-		Amount:    0,
-		Currency:  "INR",
-		Status:    "captured",
-		Method:    "upi",
-		Metadata:  make(map[string]interface{}),
-		CapturedAt: time.Now().Unix(),
+	// Fetch payment from Razorpay API
+	payment, err := r.client.Payment.Fetch(paymentID, nil, nil)
+	if err != nil {
+		if r.testMode {
+			// In test mode, return simulated response
+			return r.createSimulatedPaymentDetails(paymentID)
+		}
+		return nil, ErrVerificationFailed(paymentID, err)
 	}
 
-	return paymentDetails, nil
+	// Extract payment details
+	orderID, _ := payment["order_id"].(string)
+	amount := float64(0)
+	if val, ok := payment["amount"].(float64); ok {
+		amount = val / 100
+	}
+	currency, _ := payment["currency"].(string)
+	status, _ := payment["status"].(string)
+	method, _ := payment["method"].(string)
+
+	// Extract capture time
+	var capturedAt int64
+	if val, ok := payment["created_at"].(float64); ok {
+		capturedAt = int64(val)
+	}
+
+	// Extract metadata
+	metadata := make(map[string]interface{})
+	if notes, ok := payment["notes"].(map[string]interface{}); ok {
+		metadata = notes
+	}
+
+	return &PaymentDetails{
+		PaymentID:   paymentID,
+		OrderID:     orderID,
+		Amount:      amount,
+		Currency:    currency,
+		Status:      status,
+		Method:      method,
+		CapturedAt:  capturedAt,
+		Metadata:    metadata,
+	}, nil
+}
+
+// createSimulatedPaymentDetails creates simulated payment details for test mode
+func (r *RazorpayService) createSimulatedPaymentDetails(paymentID string) (*PaymentDetails, error) {
+	return &PaymentDetails{
+		PaymentID:  paymentID,
+		OrderID:    fmt.Sprintf("order_%s", paymentID),
+		Amount:     0,
+		Currency:   "INR",
+		Status:     "captured",
+		Method:     "upi",
+		CapturedAt: time.Now().Unix(),
+		Metadata:   make(map[string]interface{}),
+	}, nil
 }
 
 // ProcessRefund processes a refund via Razorpay
@@ -103,13 +167,39 @@ func (r *RazorpayService) ProcessRefund(ctx context.Context, paymentID string, a
 	// Create refund data
 	refundData := map[string]interface{}{
 		"amount": amountInPaise,
-		// "notes": map[string]string{
-		//     "reason": "Customer cancellation",
-		// },
 	}
 
-	// In production, send refundData to Razorpay API
-	_ = refundData // Will be used in production
+	// Call Razorpay API to process refund
+	response, err := r.client.Payment.Refund(paymentID, amountInPaise, refundData, nil)
+	if err != nil {
+		if r.testMode {
+			// In test mode, return simulated response
+			return r.createSimulatedRefund(paymentID, amount)
+		}
+		return nil, ErrRefundFailed(paymentID, err)
+	}
+
+	// Extract refund details
+	refundID, ok := response["id"].(string)
+	if !ok {
+		return nil, ErrAPIError("refund", fmt.Errorf("missing refund id in response"))
+	}
+
+	status, _ := response["status"].(string)
+	refundAmount := float64(0)
+	if val, ok := response["amount"].(float64); ok {
+		refundAmount = val / 100
+	}
+
+	return &RefundResponse{
+		RefundID: refundID,
+		Amount:   refundAmount,
+		Status:   status,
+	}, nil
+}
+
+// createSimulatedRefund creates a simulated refund for test mode
+func (r *RazorpayService) createSimulatedRefund(paymentID string, amount float64) (*RefundResponse, error) {
 	refundID := fmt.Sprintf("refund_%s_%d", paymentID, time.Now().Unix())
 
 	return &RefundResponse{
