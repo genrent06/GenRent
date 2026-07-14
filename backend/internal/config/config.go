@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -22,6 +23,20 @@ type Config struct {
 	SMTPFrom     string
 	SMTPFromName string
 	EmailEnabled bool
+
+	// Payment Gateway
+	PaymentGateway     string // "razorpay" or "stripe"
+	RazorpayKeyID      string
+	RazorpayKeySecret  string
+	RazorpayWebhookSecret string
+	StripePublishableKey string
+	StripeSecretKey     string
+	StripeWebhookSecret string
+	PaymentTimeout      int    // Payment timeout in seconds
+	PaymentCurrencyINR  string
+	PaymentCurrencyUSD  string
+	PlatformFeePercent  float64
+	RefundAutoProcess    bool
 }
 
 const defaultJWTSecret = "genrent-secret-key-change-in-production"
@@ -58,6 +73,20 @@ func Load() *Config {
 		SMTPFrom:     getEnv("SMTP_FROM", "noreply@genrent.com"),
 		SMTPFromName: getEnv("SMTP_FROM_NAME", "GenRent"),
 		EmailEnabled: smtpHost != "" && smtpPort != "",
+
+		// Payment Gateway Configuration
+		PaymentGateway:        getEnv("PAYMENT_GATEWAY", "razorpay"),
+		RazorpayKeyID:         getEnv("RAZORPAY_KEY_ID", ""),
+		RazorpayKeySecret:     getEnv("RAZORPAY_KEY_SECRET", ""),
+		RazorpayWebhookSecret: getEnv("RAZORPAY_WEBHOOK_SECRET", ""),
+		StripePublishableKey:  getEnv("STRIPE_PUBLISHABLE_KEY", ""),
+		StripeSecretKey:       getEnv("STRIPE_SECRET_KEY", ""),
+		StripeWebhookSecret:   getEnv("STRIPE_WEBHOOK_SECRET", ""),
+		PaymentTimeout:        parseInt(getEnv("PAYMENT_TIMEOUT", "900"), 900),
+		PaymentCurrencyINR:    getEnv("PAYMENT_CURRENCY_INR", "INR"),
+		PaymentCurrencyUSD:    getEnv("PAYMENT_CURRENCY_USD", "USD"),
+		PlatformFeePercent:    parseFloat(getEnv("PLATFORM_FEE_PERCENT", "10"), 10.0),
+		RefundAutoProcess:     parseBool(getEnv("REFUND_AUTO_PROCESS", "true"), true),
 	}
 }
 
@@ -66,4 +95,36 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// parseInt parses string to int with default value
+func parseInt(s string, defaultValue int) int {
+	if s == "" {
+		return defaultValue
+	}
+	var i int
+	if _, err := fmt.Sscanf(s, "%d", &i); err != nil {
+		return defaultValue
+	}
+	return i
+}
+
+// parseFloat parses string to float64 with default value
+func parseFloat(s string, defaultValue float64) float64 {
+	if s == "" {
+		return defaultValue
+	}
+	var f float64
+	if _, err := fmt.Sscanf(s, "%f", &f); err != nil {
+		return defaultValue
+	}
+	return f
+}
+
+// parseBool parses string to bool with default value
+func parseBool(s string, defaultValue bool) bool {
+	if s == "" {
+		return defaultValue
+	}
+	return s == "true" || s == "1" || s == "yes"
 }

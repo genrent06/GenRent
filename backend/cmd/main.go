@@ -142,7 +142,11 @@ func main() {
 	registerEquipmentRoutes(api)
 
 	// Payment gateway webhooks — public but rate-limited (gateway posts here)
-	api.POST("/webhooks/payment", middleware.RateLimit(60, 60), handlers.HandlePaymentWebhook(db))
+		// Payment gateway webhooks — public but rate-limited (gateway posts here)
+		paymentGatewayHandler := handlers.NewPaymentGatewayHandler(nil, db)
+		api.POST("/webhooks/payment", middleware.RateLimit(60, 60), paymentGatewayHandler.HandlePaymentWebhook)
+		api.POST("/webhooks/payment/razorpay", middleware.RateLimit(60, 60), paymentGatewayHandler.HandlePaymentWebhook)
+		api.POST("/webhooks/payment/stripe", middleware.RateLimit(60, 60), paymentGatewayHandler.HandlePaymentWebhook)
 
 	// Public routes — rate limited
 	auth := api.Group("/auth")
@@ -210,6 +214,19 @@ func main() {
 		payments.Use(middleware.RateLimit(10, 60))
 		payments.GET("/booking/:booking_id", handlers.GetPaymentDetails(db))
 		payments.POST("", handlers.ProcessPayment(db))
+
+			// Payment Gateway Integration
+			paymentGateway := handlers.NewPaymentGatewayHandler(nil, db) // Will be initialized with actual service
+			payments.POST("/create-order", paymentGateway.CreatePaymentOrder)
+			payments.GET("/verify", paymentGateway.VerifyPayment)
+			payments.GET("/status", paymentGateway.GetPaymentStatus)
+			payments.GET("/history", paymentGateway.GetPaymentHistory)
+			payments.GET("/methods", paymentGateway.GetPaymentMethods)
+			payments.GET("/calculate-options", paymentGateway.CalculatePaymentOptions)
+			payments.GET("/:id", paymentGateway.GetPaymentDetails)
+			payments.POST("/refund", paymentGateway.ProcessRefund)
+			payments.POST("/cancel", paymentGateway.CancelPayment)
+			payments.POST("/:id/resend-otp", paymentGateway.ResendPaymentOTP)
 
 		// Vendor Wallet & Withdrawals
 		protected.GET("/wallet", middleware.VendorOnly(), handlers.GetVendorWallet(db))
