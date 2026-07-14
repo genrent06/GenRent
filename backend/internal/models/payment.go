@@ -21,7 +21,7 @@ const (
 
 type Payment struct {
 	ID            uint          `json:"id" gorm:"primaryKey"`
-	BookingID     uint          `json:"booking_id" gorm:"not null;uniqueIndex"`
+	BookingID     uint          `json:"booking_id" gorm:"not null;index"`
 	Booking       Booking       `json:"booking,omitempty" gorm:"foreignKey:BookingID"`
 	TotalAmount   float64       `json:"total_amount"`
 	AdvanceAmount float64       `json:"advance_amount"` // 30% of total
@@ -37,7 +37,7 @@ type Payment struct {
 
 type VendorWallet struct {
 	ID                   uint               `json:"id" gorm:"primaryKey"`
-	VendorID             uint               `json:"vendor_id" gorm:"uniqueIndex;not null"`
+	VendorID             uint               `json:"vendor_id" gorm:"index;not null"`
 	Vendor               Vendor             `json:"vendor,omitempty" gorm:"foreignKey:VendorID"`
 	Balance              float64            `json:"balance" gorm:"default:0"`               // Available to withdraw
 	HoldBalance          float64            `json:"hold_balance" gorm:"default:0"`          // Escrow — released after delivery

@@ -299,3 +299,20 @@ func renderTemplate(title string, data EmailData, content string) string {
 </body>
 </html>`
 }
+
+func PasswordResetEmail(data EmailData) string {
+	resetURL := fmt.Sprintf("http://localhost:8080/reset-password?token=%s", data.Message)
+	return renderTemplate("Reset Your Password", data, `
+		<p>Hello <strong>`+data.ToName+`</strong>,</p>
+		<p>We received a request to reset your password for your <strong>GenRent</strong> account.</p>
+		<div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:12px;padding:1.5rem;margin:1.5rem 0;text-align:center;">
+			<p style="margin:0 0 0.5rem;color:#92400e;font-weight:600;font-size:0.9rem;">PASSWORD RESET LINK</p>
+			<div style="background:#fef3c7;padding:0.75rem;margin:1rem 0;border-radius:6px;font-family:monospace;font-size:0.85rem;color:#92400e;word-break:break-all;">` + data.Message + `</div>
+			<p style="margin:0.5rem 0 0;color:#92400e;font-size:0.8rem;">This link expires in <strong>1 hour</strong>.</p>
+		</div>
+		<div style="text-align:center;margin:2rem 0;">
+			<a href="`+resetURL+`" `+ctaStyle("primary")+`>Reset Your Password</a>
+		</div>
+		<p style="color:#6b7280;font-size:0.85rem;">If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
+	`)
+}

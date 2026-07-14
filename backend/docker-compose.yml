@@ -9,9 +9,9 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-genrent}
-    # DB is NOT exposed to host — only reachable inside Docker network
-    expose:
-      - "5432"
+    # Expose to host for local development
+    ports:
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

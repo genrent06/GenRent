@@ -8,7 +8,7 @@ import (
 
 type Vendor struct {
 	ID          uint        `json:"id" gorm:"primaryKey"`
-	UserID      uint        `json:"user_id" gorm:"uniqueIndex;not null"`
+	UserID      uint        `json:"user_id" gorm:"index;not null"`
 	User        User        `json:"user" gorm:"foreignKey:UserID"`
 	CompanyName string      `json:"company_name" gorm:"not null"`
 	Address     string      `json:"-"`      // internal only

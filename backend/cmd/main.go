@@ -5,6 +5,7 @@ import (
 	"genrent/internal/config"
 	"genrent/internal/database"
 	"genrent/internal/handlers"
+	"genrent/internal/migrate"
 	"genrent/internal/middleware"
 	"genrent/internal/services/email"
 	"genrent/internal/workers"
@@ -25,6 +26,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
+
+	// Enable detailed logging to debug migration
+	db.Logger = db.Logger.LogMode(4) // Info level
+
+	// Run GORM AutoMigrate
+	if err := migrate.AutoMigrate(db); err != nil {
+		log.Fatal("Failed to run migrations:", err)
+	}
+
 	// Start background expiry worker
 	workers.StartExpiryWorker(db)
 
@@ -88,6 +98,8 @@ func main() {
 	r.StaticFile("/", frontendPath+"/index.html")
 	r.StaticFile("/login", frontendPath+"/login.html")
 	r.StaticFile("/register", frontendPath+"/register.html")
+	r.StaticFile("/forgot-password", frontendPath+"/forgot-password.html")
+	r.StaticFile("/reset-password", frontendPath+"/reset-password.html")
 	r.StaticFile("/vendor-dashboard", frontendPath+"/vendor-dashboard.html")
 	r.StaticFile("/add-equipment", frontendPath+"/add-equipment.html")
 	r.StaticFile("/admin-dashboard", frontendPath+"/admin-dashboard.html")
@@ -137,6 +149,8 @@ func main() {
 	auth.Use(middleware.RateLimit(10, 60)) // 10 requests per minute
 	auth.POST("/register", handlers.Register(db))
 	auth.POST("/login", handlers.Login(db, cfg.JWTSecret))
+	auth.POST("/forgot-password", handlers.ForgotPassword(db))
+	auth.POST("/reset-password", handlers.ResetPassword(db))
 
 	// Public read routes
 	api.GET("/generators", handlers.SearchGenerators(db))
