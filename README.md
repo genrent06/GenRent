@@ -1072,7 +1072,7 @@ For questions, issues, or contributions:
 ### Planned Features
 
 #### 🚀 High Priority
-- [ ] **Payment Gateway Integration**
+- [ ] **Payment Gateway Integration** 📘 [Detailed Implementation Plan](ROADMAP_PAYMENT_GATEWAY.md)
   - Razorpay integration for Indian market
   - Stripe integration for international payments
   - UPI payment support
