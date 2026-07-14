@@ -777,202 +777,67 @@ For detailed schema documentation, see [backend/internal/migrate/README.md](back
 
 ## API Documentation
 
-### Base URL
-- Development: `http://localhost:8080`
-- Production: `https://your-domain.com`
+For complete API documentation including all endpoints, request/response examples, authentication, and error handling, see:
 
-### Authentication
+**[📘 Full API Documentation](API_DOCUMENTATION.md)**
 
-Most endpoints require JWT authentication. Include the token in the Authorization header:
+### Quick Reference
 
+#### Base URLs
+- Development: `http://localhost:8080/api/v1`
+- Production: `https://your-domain.com/api/v1`
+
+#### Authentication
+Most endpoints require JWT authentication:
 ```
 Authorization: Bearer <your-jwt-token>
 ```
 
-### Public Endpoints
+#### Key Endpoints
 
-#### Health Check
-```
-GET /health
-```
-Response:
-```json
-{
-  "status": "ok",
-  "database": "connected",
-  "version": "v1"
-}
-```
+| Endpoint | Method | Description | Auth |
+|----------|--------|-------------|------|
+| `/health` | GET | Health check | No |
+| `/docs` | GET | API documentation (JSON) | No |
+| `/metrics` | GET | Platform statistics | No |
+| `/auth/register` | POST | Register new user | No |
+| `/auth/login` | POST | Login & get token | No |
+| `/auth/forgot-password` | POST | Request password reset | No |
+| `/auth/reset-password` | POST | Reset password | No |
+| `/auth/profile` | GET | Get user profile | Yes |
+| `/equipment` | GET | Search equipment | No |
+| `/equipment/:id` | GET | Get equipment details | No |
+| `/equipment` | POST | Create equipment | Vendor |
+| `/bookings` | POST | Create booking | Customer |
+| `/bookings` | GET | Get my bookings | Yes |
+| `/bookings/:id/accept` | POST | Accept booking | Vendor |
+| `/wallet` | GET | Get wallet balance | Vendor |
+| `/wallet/withdraw` | POST | Request withdrawal | Vendor |
+| `/admin/stats` | GET | Platform statistics | Admin |
 
-#### API Documentation
-```
-GET /docs
-```
-Returns structured endpoint documentation.
+#### Example Requests
 
-#### Metrics
-```
-GET /metrics
-```
-Returns platform statistics.
-
-### Authentication Endpoints
-
-#### Register
-```
-POST /api/v1/auth/register
-Content-Type: application/json
-
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "phone": "1234567890",
-  "password": "securepassword",
-  "role": "customer"
-}
+**Login:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
 ```
 
-#### Login
-```
-POST /api/v1/auth/login
-Content-Type: application/json
-
-{
-  "email": "john@example.com",
-  "password": "securepassword"
-}
-```
-
-#### Forgot Password
-```
-POST /api/v1/auth/forgot-password
-Content-Type: application/json
-
-{
-  "email": "john@example.com"
-}
+**Create Booking:**
+```bash
+curl -X POST http://localhost:8080/api/v1/bookings \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "equipment_id": 101,
+    "start_date": "2024-02-01T10:00:00Z",
+    "end_date": "2024-02-10T10:00:00Z",
+    "address": "Construction Site"
+  }'
 ```
 
-#### Reset Password
-```
-POST /api/v1/auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "reset-token-from-email",
-  "newPassword": "newsecurepassword"
-}
-```
-
-### Equipment Endpoints
-
-#### List Equipment
-```
-GET /api/v1/equipment?city=Delhi&category=generators
-```
-
-#### Get Equipment Details
-```
-GET /api/v1/equipment/:id
-```
-
-#### Create Equipment (Vendor only)
-```
-POST /api/v1/equipment
-Authorization: Bearer <vendor-token>
-Content-Type: application/json
-
-{
-  "name": "Generator 50KVA",
-  "category_id": 1,
-  "daily_price": 1500,
-  "weekly_price": 9000,
-  "monthly_price": 35000,
-  "total_quantity": 5,
-  "location": "Industrial Area",
-  "city": "Delhi"
-}
-```
-
-### Booking Endpoints
-
-#### Create Booking
-```
-POST /api/v1/bookings
-Authorization: Bearer <customer-token>
-Content-Type: application/json
-
-{
-  "equipment_id": 123,
-  "start_date": "2024-01-15T10:00:00Z",
-  "end_date": "2024-01-20T10:00:00Z",
-  "address": "Delivery address",
-  "notes": "Optional notes"
-}
-```
-
-#### Get My Bookings
-```
-GET /api/v1/bookings/my-bookings
-Authorization: Bearer <token>
-```
-
-#### Accept Booking (Vendor only)
-```
-POST /api/v1/bookings/:id/accept
-Authorization: Bearer <vendor-token>
-```
-
-#### Verify Delivery OTP
-```
-POST /api/v1/bookings/:id/verify-delivery
-Authorization: Bearer <vendor-token>
-Content-Type: application/json
-
-{
-  "otp": "123456"
-}
-```
-
-### Vendor Endpoints
-
-#### Get Vendor Profile
-```
-GET /api/v1/vendors/profile
-Authorization: Bearer <vendor-token>
-```
-
-#### Request Withdrawal
-```
-POST /api/v1/vendors/withdraw
-Authorization: Bearer <vendor-token>
-Content-Type: application/json
-
-{
-  "amount": 5000,
-  "bank_account_id": 123
-}
-```
-
-### Admin Endpoints
-
-#### Get Dashboard Stats
-```
-GET /api/v1/admin/dashboard
-Authorization: Bearer <admin-token>
-```
-
-#### Handle Withdrawal Request
-```
-POST /api/v1/admin/withdrawals/:id
-Authorization: Bearer <admin-token>
-Content-Type: application/json
-
-{
-  "action": "approve",
-  "note": "Approved"
-}
-```
+For detailed API documentation with all endpoints, schemas, and examples, refer to **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)**.
 
 ---
 
