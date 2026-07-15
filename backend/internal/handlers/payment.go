@@ -9,11 +9,40 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+// Validation patterns
+var (
+	ifscPattern        = regexp.MustCompile(`^[A-Z]{4}[0-9A-Z]{7}$`)
+	accountNoPattern   = regexp.MustCompile(`^\d{9,18}$`)
+	bankNamePattern    = regexp.MustCompile(`^[a-zA-Z\s]{3,}$`)
+	accountNamePattern = regexp.MustCompile(`^[a-zA-Z\s]{3,}$`)
+)
+
+// validateIFSC validates IFSC code format (4 letters + 7 alphanumeric characters)
+func validateIFSC(ifsc string) bool {
+	return ifscPattern.MatchString(ifsc)
+}
+
+// validateAccountNumber validates account number (9-18 digits)
+func validateAccountNumber(accountNo string) bool {
+	return accountNoPattern.MatchString(accountNo)
+}
+
+// validateBankName validates bank name (min 3 characters, letters and spaces)
+func validateBankName(bankName string) bool {
+	return bankNamePattern.MatchString(bankName)
+}
+
+// validateAccountName validates account holder name (min 3 characters)
+func validateAccountName(accountName string) bool {
+	return accountNamePattern.MatchString(accountName)
+}
 
 // hashOTP returns the SHA256 hex of the plain OTP — only the hash is stored in DB.
 func hashOTP(plain string) string {
@@ -272,6 +301,59 @@ func SaveBankAccount(db *gorm.DB) gin.HandlerFunc {
 		}
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": ValidationError(err), "errors": ValidationErrors(err)})
+			return
+		}
+
+		// Validate bank name
+		if !validateBankName(body.BankName) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid bank name format",
+				"errors": map[string]interface{}{
+					"bank_name": "Bank name must be at least 3 characters (letters and spaces only)",
+				},
+			})
+			return
+		}
+
+		// Validate account holder name
+		if !validateAccountName(body.AccountName) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid account holder name",
+				"errors": map[string]interface{}{
+					"account_name": "Account holder name must be at least 3 characters",
+				},
+			})
+			return
+		}
+
+		// Validate account number
+		if !validateAccountNumber(body.AccountNo) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid account number",
+				"errors": map[string]interface{}{
+					"account_no": "Account number must be 9-18 digits",
+				},
+			})
+			return
+		}
+
+		// Validate IFSC code
+		if !validateIFSC(body.IFSC) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid IFSC code",
+				"errors": map[string]interface{}{
+					"ifsc": "IFSC code must be 11 characters (4 letters + 7 alphanumeric, e.g., HDFC0001234)",
+				},
+			})
+			return
+		}
+
+		// Check for duplicate account (same account number + IFSC)
+		var existingAcc models.VendorBankAccount
+		if db.Where("vendor_id = ? AND account_no = ? AND ifsc = ?", vendor.ID, body.AccountNo, body.IFSC).First(&existingAcc).Error == nil {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": "this bank account is already registered",
+			})
 			return
 		}
 

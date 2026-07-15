@@ -255,15 +255,24 @@ func EquipmentBookingStats(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		// Get all equipment for vendor with booking and revenue stats
-		var stats []gin.H
+		type EquipmentStat struct {
+			ID                uint    `json:"id"`
+			Name              string  `json:"name"`
+			CategoryID        uint    `json:"category_id"`
+			AvailabilityStatus string `json:"availability_status"`
+			TotalBookings     int64   `json:"total_bookings"`
+			TotalRevenue      float64 `json:"total_revenue"`
+		}
+
+		var stats []EquipmentStat
 		db.
-			Select(`equipment.id, equipment.name, equipment.category_id, 
+			Select(`equipment.id, equipment.name, equipment.category_id, equipment.availability_status,
 				COUNT(CASE WHEN bookings.status != 'cancelled' THEN 1 END) as total_bookings,
 				SUM(CASE WHEN bookings.status = 'completed' THEN bookings.total_price ELSE 0 END) as total_revenue`).
 			Table("equipment").
 			Joins("LEFT JOIN bookings ON equipment.id = bookings.equipment_id").
 			Where("equipment.vendor_id = ?", vendor.ID).
-			Group("equipment.id").
+			Group("equipment.id, equipment.name, equipment.category_id, equipment.availability_status").
 			Scan(&stats)
 
 		c.JSON(http.StatusOK, gin.H{"stats": stats})

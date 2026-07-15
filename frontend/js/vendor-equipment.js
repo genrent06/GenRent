@@ -17,6 +17,12 @@ async function loadEquipmentStats() {
     const data = await response.json();
     if (!data.stats || data.stats.length === 0) {
       document.getElementById('equipmentStats').style.display = 'none';
+      // Show "No equipment" message instead of leaving loading state
+      document.getElementById('equipmentTableBody').innerHTML = `
+        <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-light);">
+          No equipment found. <a href="#" onclick="openAddEquipment()" style="color:var(--primary);font-weight:600;">Add your first equipment →</a>
+        </td></tr>
+      `;
       return;
     }
 
@@ -68,6 +74,8 @@ function renderEquipmentOperationsTable(stats) {
 
 // Helper to get category name
 function getCategoryName(categoryId) {
+  // Convert to integer in case it comes as float from API
+  const id = parseInt(categoryId) || 0;
   const categories = {
     1: 'Power Equipment', 2: 'Generators', 3: 'Tower Lights', 4: 'Distribution Panels', 5: 'Cables',
     6: 'Construction Equipment', 7: 'Excavators', 8: 'Backhoe Loaders', 9: 'Concrete Mixers',
@@ -75,7 +83,7 @@ function getCategoryName(categoryId) {
     15: 'Boom Lifts', 16: 'Scissor Lifts', 17: 'Site Equipment', 18: 'Air Compressors', 19: 'Water Pumps',
     20: 'Welding Machines', 21: 'Cutting Machines'
   };
-  return categories[categoryId] || 'Unknown';
+  return categories[id] || 'Unknown';
 }
 
 // Edit equipment
@@ -147,8 +155,15 @@ function openAddEquipment() {
 }
 
 // Load equipment on page load
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('equipmentTableBody')) {
+      loadEquipmentStats();
+    }
+  });
+} else {
+  // DOM already loaded, call immediately if on equipment section
   if (document.getElementById('equipmentTableBody')) {
     loadEquipmentStats();
   }
-});
+}

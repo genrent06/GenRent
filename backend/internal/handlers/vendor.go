@@ -4,11 +4,25 @@ import (
 	"genrent/internal/middleware"
 	"genrent/internal/models"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+// Phone validation pattern for Indian phone numbers
+var phonePattern = regexp.MustCompile(`^(\+91[-\s]?)?[6-9]\d{9}$`)
+
+// validatePhone validates phone number format (Indian format)
+func validatePhone(phone string) bool {
+	if phone == "" {
+		return true // Phone is optional
+	}
+	// Remove spaces for validation
+	normalizedPhone := regexp.MustCompile(`\s`).ReplaceAllString(phone, "")
+	return phonePattern.MatchString(normalizedPhone)
+}
 
 type CreateVendorRequest struct {
 	CompanyName string  `json:"company_name" binding:"required"`
@@ -33,6 +47,28 @@ func CreateVendor(db *gorm.DB) gin.HandlerFunc {
 		var req CreateVendorRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": ValidationError(err), "errors": ValidationErrors(err)})
+			return
+		}
+
+		// Validate phone number if provided
+		if req.Phone != "" && !validatePhone(req.Phone) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid phone number",
+				"errors": map[string]interface{}{
+					"phone": "Phone number must be 10 digits (e.g., 9876543210)",
+				},
+			})
+			return
+		}
+
+		// Validate company name length
+		if len(req.CompanyName) < 3 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid company name",
+				"errors": map[string]interface{}{
+					"company_name": "Company name must be at least 3 characters",
+				},
+			})
 			return
 		}
 
@@ -76,7 +112,8 @@ func UpdateVendorProfile(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := middleware.GetUserID(c)
 		var vendor models.Vendor
-		if result := db.Where("user_id = ?", userID).First(&vendor); result.Error != nil {
+		result := db.Where("user_id = ?", userID).First(&vendor)
+		if result.Error != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "vendor profile not found"})
 			return
 		}
@@ -84,6 +121,28 @@ func UpdateVendorProfile(db *gorm.DB) gin.HandlerFunc {
 		var req CreateVendorRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": ValidationError(err), "errors": ValidationErrors(err)})
+			return
+		}
+
+		// Validate phone number if provided
+		if req.Phone != "" && !validatePhone(req.Phone) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid phone number",
+				"errors": map[string]interface{}{
+					"phone": "Phone number must be 10 digits (e.g., 9876543210)",
+				},
+			})
+			return
+		}
+
+		// Validate company name length
+		if len(req.CompanyName) < 3 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid company name",
+				"errors": map[string]interface{}{
+					"company_name": "Company name must be at least 3 characters",
+				},
+			})
 			return
 		}
 

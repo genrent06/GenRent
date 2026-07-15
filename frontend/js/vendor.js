@@ -117,18 +117,64 @@ function captureGenLocation() {
   );
 }
 
+let isSavingProfile = false; // Prevent duplicate submissions
+
 async function saveVendorProfile(event) {
   event.preventDefault();
+
+  // Prevent duplicate submissions
+  if (isSavingProfile) {
+    showAlert('profileAlert', 'Please wait, saving profile...', 'error');
+    return;
+  }
+
   clearAlert('profileAlert');
+
+  // Clear previous field errors
+  ['companyName', 'vendorCity', 'vendorPhone', 'vendorAddress', 'vendorDescription'].forEach(clearFieldError);
+
+  const companyName = document.getElementById('companyName').value.trim();
+  const city = document.getElementById('vendorCity').value;
+  const phone = document.getElementById('vendorPhone').value.trim();
+  const address = document.getElementById('vendorAddress').value.trim();
+  const description = document.getElementById('vendorDescription').value.trim();
+
+  let hasError = false;
+
+  // Validate company name
+  if (!companyName) {
+    showFieldError('companyName', 'Company name is required');
+    hasError = true;
+  } else if (companyName.length < 3) {
+    showFieldError('companyName', 'Company name must be at least 3 characters');
+    hasError = true;
+  }
+
+  // Validate city
+  if (!city) {
+    showFieldError('vendorCity', 'Please select a city');
+    hasError = true;
+  }
+
+  // Validate phone (optional but if provided, must be valid)
+  if (phone && !validatePhoneNumber(phone)) {
+    showFieldError('vendorPhone', 'Invalid phone number (use 10-digit format like 9876543210)');
+    hasError = true;
+  }
+
+  if (hasError) {
+    showAlert('profileAlert', 'Please fix the validation errors below', 'error');
+    return;
+  }
 
   const lat = parseFloat(document.getElementById('vendorLatitude').value);
   const lng = parseFloat(document.getElementById('vendorLongitude').value);
   const data = {
-    company_name: document.getElementById('companyName').value,
-    city: document.getElementById('vendorCity').value,
-    phone: document.getElementById('vendorPhone').value,
-    address: document.getElementById('vendorAddress').value,
-    description: document.getElementById('vendorDescription').value,
+    company_name: companyName,
+    city: city,
+    phone: phone,
+    address: address,
+    description: description,
     latitude: isNaN(lat) ? 0 : lat,
     longitude: isNaN(lng) ? 0 : lng,
   };
@@ -136,6 +182,7 @@ async function saveVendorProfile(event) {
   const btn = document.getElementById('saveProfileBtn');
   btn.disabled = true;
   btn.textContent = 'Saving...';
+  isSavingProfile = true;
 
   try {
     if (vendorProfile) {
@@ -163,6 +210,7 @@ async function saveVendorProfile(event) {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Save Profile';
+    isSavingProfile = false;
   }
 }
 
@@ -251,11 +299,251 @@ async function loadBankAccounts() {
 
 function showAddBankForm() {
   document.getElementById('addBankForm').style.display = 'block';
+  // Set up real-time validation listeners
+  setupBankFieldValidation();
 }
 function hideAddBankForm() {
   document.getElementById('addBankForm').style.display = 'none';
-  ['newBankName','newAccountName','newAccountNo','newIFSC'].forEach(id => document.getElementById(id).value = '');
+  ['newBankName','newAccountName','newAccountNo','newIFSC'].forEach(id => {
+    const field = document.getElementById(id);
+    field.value = '';
+    field.style.borderColor = '';
+    // Hide hints
+    const hint = field.parentElement.querySelector('.field-hint');
+    if (hint) hint.style.display = 'none';
+  });
   document.getElementById('newIsPrimary').checked = false;
+}
+
+// Real-time validation for bank account fields
+function setupBankFieldValidation() {
+  const bankNameField = document.getElementById('newBankName');
+  const accountNameField = document.getElementById('newAccountName');
+  const accountNoField = document.getElementById('newAccountNo');
+  const ifscField = document.getElementById('newIFSC');
+
+  if (!bankNameField) return;
+
+  // Helper function to show hint and hide placeholder
+  function setupFloatingHint(input, hintSelector) {
+    const hint = input.parentElement.querySelector(hintSelector);
+    if (!hint) return;
+
+    input.addEventListener('focus', function() {
+      if (!this.value) {
+        hint.style.display = 'block';
+      }
+    });
+
+    input.addEventListener('input', function() {
+      if (this.value) {
+        hint.style.display = 'block';
+      }
+    });
+
+    input.addEventListener('blur', function() {
+      if (!this.value) {
+        hint.style.display = 'none';
+      }
+    });
+  }
+
+  // Setup floating hints for all fields
+  setupFloatingHint(bankNameField, '.field-hint');
+  setupFloatingHint(accountNameField, '.field-hint');
+  setupFloatingHint(accountNoField, '.field-hint');
+  setupFloatingHint(ifscField, '.field-hint');
+
+  // Bank name validation
+  bankNameField.addEventListener('input', function() {
+    const value = this.value.trim();
+    if (value && validateBankName(value)) {
+      this.style.borderColor = '#16a34a'; // Green - Valid
+    } else if (value) {
+      this.style.borderColor = '#dc2626'; // Red - Invalid
+    } else {
+      this.style.borderColor = ''; // Empty - default
+    }
+  });
+
+  // Account holder name validation
+  accountNameField.addEventListener('input', function() {
+    const value = this.value.trim();
+    if (value && validateAccountHolderName(value)) {
+      this.style.borderColor = '#16a34a'; // Green - Valid
+    } else if (value) {
+      this.style.borderColor = '#dc2626'; // Red - Invalid
+    } else {
+      this.style.borderColor = ''; // Empty - default
+    }
+  });
+
+  // Account number validation - allow only digits
+  accountNoField.addEventListener('input', function() {
+    // Remove non-digits
+    const digitsOnly = this.value.replace(/\D/g, '');
+    this.value = digitsOnly;
+
+    const value = this.value.trim();
+    if (value && validateAccountNumber(value)) {
+      this.style.borderColor = '#16a34a'; // Green - Valid
+    } else if (value && value.length >= 9) {
+      this.style.borderColor = '#f59e0b'; // Yellow - Close but not quite
+    } else if (value) {
+      this.style.borderColor = '#dc2626'; // Red - Invalid
+    } else {
+      this.style.borderColor = ''; // Empty - default
+    }
+  });
+
+  // IFSC validation - auto-uppercase
+  ifscField.addEventListener('input', function() {
+    // Auto-uppercase
+    this.value = this.value.toUpperCase();
+
+    const value = this.value.trim();
+    if (value && validateIFSC(value)) {
+      this.style.borderColor = '#16a34a'; // Green - Valid
+    } else if (value && value.length >= 8) {
+      this.style.borderColor = '#f59e0b'; // Yellow - Close
+    } else if (value) {
+      this.style.borderColor = '#dc2626'; // Red - Invalid
+    } else {
+      this.style.borderColor = ''; // Empty - default
+    }
+  });
+}
+
+// Real-time validation for profile fields
+function setupProfileFieldValidation() {
+  const companyNameField = document.getElementById('companyName');
+  const phoneField = document.getElementById('vendorPhone');
+
+  if (!companyNameField) return;
+
+  // Setup floating hints
+  companyNameField.parentElement.querySelectorAll('.field-hint').forEach(hint => {
+    companyNameField.addEventListener('focus', function() {
+      if (!this.value) hint.style.display = 'block';
+    });
+    companyNameField.addEventListener('input', function() {
+      if (this.value) hint.style.display = 'block';
+    });
+    companyNameField.addEventListener('blur', function() {
+      if (!this.value) hint.style.display = 'none';
+    });
+  });
+
+  // Company name validation
+  companyNameField.addEventListener('input', function() {
+    const value = this.value.trim();
+    if (value && value.length >= 3) {
+      this.style.borderColor = '#16a34a'; // Green - Valid
+    } else if (value) {
+      this.style.borderColor = '#f59e0b'; // Yellow - Needs more chars
+    } else {
+      this.style.borderColor = ''; // Empty - default
+    }
+  });
+
+  // Phone validation with floating hint
+  if (phoneField) {
+    const phoneHint = phoneField.parentElement.querySelector('.field-hint');
+    if (phoneHint) {
+      phoneField.addEventListener('focus', function() {
+        if (!this.value) phoneHint.style.display = 'block';
+      });
+      phoneField.addEventListener('input', function() {
+        if (this.value) phoneHint.style.display = 'block';
+      });
+      phoneField.addEventListener('blur', function() {
+        if (!this.value) phoneHint.style.display = 'none';
+      });
+    }
+
+    phoneField.addEventListener('input', function() {
+      const value = this.value.trim();
+      if (!value) {
+        this.style.borderColor = ''; // Empty - default
+      } else if (validatePhoneNumber(value)) {
+        this.style.borderColor = '#16a34a'; // Green - Valid
+      } else {
+        this.style.borderColor = '#dc2626'; // Red - Invalid
+      }
+    });
+  }
+}
+
+// Call setup when profile section is shown
+const originalShowSection = showSection;
+showSection = function(name) {
+  originalShowSection(name);
+  if (name === 'profile') {
+    setTimeout(setupProfileFieldValidation, 100);
+  }
+};
+
+// Validation helper functions
+function validateIFSC(ifsc) {
+  // IFSC should be 11 characters: 4 letters (bank code) + 7 characters (branch code)
+  // Format: XXXX0123456 (e.g., HDFC0001234, SBIN0001234)
+  const ifscPattern = /^[A-Z]{4}[0-9A-Z]{7}$/;
+  return ifscPattern.test(ifsc.toUpperCase());
+}
+
+function validateAccountNumber(accountNo) {
+  // Account number should be numeric, 9-18 digits
+  const accountPattern = /^\d{9,18}$/;
+  return accountPattern.test(accountNo);
+}
+
+function validateBankName(bankName) {
+  // Bank name should be at least 3 characters, letters and spaces only
+  const namePattern = /^[a-zA-Z\s]{3,}$/;
+  return namePattern.test(bankName.trim());
+}
+
+function validateAccountHolderName(accountName) {
+  // Account holder name should be at least 3 characters
+  return accountName.trim().length >= 3;
+}
+
+function validatePhoneNumber(phone) {
+  // Indian phone number: starts with 6-9, total 10 digits
+  // Can optionally have +91 prefix or spaces
+  const phonePattern = /^(\+91[-\s]?)?[6-9]\d{9}$/;
+  return phonePattern.test(phone.replace(/\s/g, ''));
+}
+
+// Show field-level error
+function showFieldError(fieldId, message) {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  // Remove existing error
+  const existingError = field.parentElement.querySelector('.field-error');
+  if (existingError) existingError.remove();
+
+  // Add error message
+  const error = document.createElement('div');
+  error.className = 'field-error';
+  error.style.cssText = 'color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem; font-weight: 500;';
+  error.textContent = message;
+  field.parentElement.appendChild(error);
+
+  // Add red border to field
+  field.style.borderColor = '#dc2626';
+}
+
+// Clear field-level error
+function clearFieldError(fieldId) {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  const existingError = field.parentElement.querySelector('.field-error');
+  if (existingError) existingError.remove();
+
+  // Don't reset border - let the validation state show through
 }
 
 async function saveBankAccount() {
@@ -265,13 +553,57 @@ async function saveBankAccount() {
   const ifsc        = document.getElementById('newIFSC').value.trim().toUpperCase();
   const isPrimary   = document.getElementById('newIsPrimary').checked;
 
-  if (!bankName || !accountName || !accountNo || !ifsc)
-    return showAlert('bankFormAlert', 'All fields are required', 'error');
+  // Clear previous field errors
+  ['newBankName', 'newAccountName', 'newAccountNo', 'newIFSC'].forEach(clearFieldError);
+
+  let hasError = false;
+
+  // Validate bank name
+  if (!bankName) {
+    showFieldError('newBankName', 'Bank name is required');
+    hasError = true;
+  } else if (!validateBankName(bankName)) {
+    showFieldError('newBankName', 'Enter a valid bank name (min 3 characters)');
+    hasError = true;
+  }
+
+  // Validate account holder name
+  if (!accountName) {
+    showFieldError('newAccountName', 'Account holder name is required');
+    hasError = true;
+  } else if (!validateAccountHolderName(accountName)) {
+    showFieldError('newAccountName', 'Enter a valid name (min 3 characters)');
+    hasError = true;
+  }
+
+  // Validate account number
+  if (!accountNo) {
+    showFieldError('newAccountNo', 'Account number is required');
+    hasError = true;
+  } else if (!validateAccountNumber(accountNo)) {
+    showFieldError('newAccountNo', 'Account number must be 9-18 digits');
+    hasError = true;
+  }
+
+  // Validate IFSC
+  if (!ifsc) {
+    showFieldError('newIFSC', 'IFSC code is required');
+    hasError = true;
+  } else if (!validateIFSC(ifsc)) {
+    showFieldError('newIFSC', 'Invalid IFSC format (e.g., HDFC0001234)');
+    hasError = true;
+  }
+
+  if (hasError) {
+    showAlert('bankFormAlert', 'Please fix the validation errors below', 'error');
+    return;
+  }
 
   try {
     await api.post('/wallet/bank-accounts', { bank_name: bankName, account_name: accountName, account_no: accountNo, ifsc, is_primary: isPrimary }, true);
     hideAddBankForm();
     loadBankAccounts();
+    showAlert('bankFormAlert', '', 'success'); // Clear alert on success
   } catch (err) {
     showAlert('bankFormAlert', err.message, 'error');
   }

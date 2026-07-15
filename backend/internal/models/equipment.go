@@ -9,19 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type EquipmentCategory struct {
-	ID               uint                    `json:"id" gorm:"primaryKey"`
-	Name             string                  `json:"name" gorm:"not null;index"`
-	ParentCategoryID *uint                   `json:"parent_category_id" gorm:"index"`
-	ParentCategory   *EquipmentCategory      `json:"parent,omitempty" gorm:"foreignKey:ParentCategoryID"`
-	Description      string                  `json:"description"`
-	IconURL          string                  `json:"icon_url"`
-	DisplayOrder     int                     `json:"display_order" gorm:"default:0"`
-	DeletedAt        gorm.DeletedAt          `json:"deleted_at,omitempty" gorm:"index"`
-	CreatedAt        time.Time               `json:"created_at"`
-	UpdatedAt        time.Time               `json:"updated_at"`
-}
-
 type EquipmentSpecs map[string]interface{}
 
 func (es EquipmentSpecs) Value() (driver.Value, error) {
@@ -71,7 +58,3 @@ func (Equipment) TableName() string {
 	return "equipment"
 }
 
-// TableName specifies table name for EquipmentCategory
-func (EquipmentCategory) TableName() string {
-	return "equipment_categories"
-}

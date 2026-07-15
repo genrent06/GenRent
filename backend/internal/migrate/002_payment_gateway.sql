@@ -10,6 +10,9 @@ ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30);
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_metadata JSONB DEFAULT '{}'::jsonb;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS escrow_held_at TIMESTAMP;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS escrow_released_at TIMESTAMP;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS vendor_id BIGINT;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS vendor_amount FLOAT DEFAULT 0;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS platform_fee FLOAT DEFAULT 0;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_id VARCHAR;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_amount FLOAT DEFAULT 0;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS refund_status VARCHAR(20);
@@ -106,3 +109,163 @@ CREATE INDEX IF NOT EXISTS idx_refund_payment ON refund_requests(payment_id);
 CREATE INDEX IF NOT EXISTS idx_refund_booking ON refund_requests(booking_id);
 CREATE INDEX IF NOT EXISTS idx_refund_status ON refund_requests(status);
 CREATE INDEX IF NOT EXISTS idx_refund_requested ON refund_requests(requested_by);
+
+-- Create vendor_wallets table for escrow management
+CREATE TABLE IF NOT EXISTS vendor_wallets (
+    id BIGSERIAL PRIMARY KEY,
+    vendor_id BIGINT NOT NULL UNIQUE,
+    balance FLOAT DEFAULT 0,
+    total_earned FLOAT DEFAULT 0,
+    last_credited_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_wallet_vendor ON vendor_wallets(vendor_id);
+
+-- Add vendor foreign key constraint if vendors table exists
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'vendors') THEN
+        ALTER TABLE vendor_wallets
+        ADD CONSTRAINT fk_vendor_wallet_vendor
+        FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- Add payment foreign key constraint to vendor_wallets (users table as vendors)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
+        ALTER TABLE vendor_wallets
+        ADD CONSTRAINT fk_vendor_wallet_user
+        FOREIGN KEY (vendor_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- Create webhook_events table for logging
+CREATE TABLE IF NOT EXISTS webhook_events (
+    id BIGSERIAL PRIMARY KEY,
+    gateway VARCHAR(20) NOT NULL,
+    event_type VARCHAR(100) NOT NULL,
+    event_id VARCHAR UNIQUE,
+    payload JSONB NOT NULL,
+    signature VARCHAR,
+    processed BOOLEAN DEFAULT false,
+    processing_attempts INT DEFAULT 0,
+    last_error TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_gateway ON webhook_events(gateway);
+CREATE INDEX IF NOT EXISTS idx_webhook_type ON webhook_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_webhook_processed ON webhook_events(processed);
+CREATE INDEX IF NOT EXISTS idx_webhook_event_id ON webhook_events(event_id) WHERE event_id IS NOT NULL;
+
+-- Create payment_logs table for audit trail
+CREATE TABLE IF NOT EXISTS payment_logs (
+    id BIGSERIAL PRIMARY KEY,
+    payment_id BIGINT REFERENCES payments(id) ON DELETE SET NULL,
+    level VARCHAR(20) DEFAULT 'INFO',
+    action VARCHAR(100),
+    message TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_logs_payment ON payment_logs(payment_id) WHERE payment_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_payment_logs_level ON payment_logs(level);
+CREATE INDEX IF NOT EXISTS idx_payment_logs_created ON payment_logs(created_at);
+
+-- Create payment_settlements table for tracking settlements to vendors
+CREATE TABLE IF NOT EXISTS payment_settlements (
+    id BIGSERIAL PRIMARY KEY,
+    vendor_id BIGINT NOT NULL,
+    payment_id BIGINT REFERENCES payments(id),
+    booking_id BIGINT REFERENCES bookings(id),
+    amount FLOAT NOT NULL,
+    platform_fee FLOAT NOT NULL,
+    settlement_type VARCHAR(20) DEFAULT 'escrow_release',
+    status VARCHAR(20) DEFAULT 'pending',
+    processed_at TIMESTAMP,
+    gateway_settlement_id VARCHAR,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_settlement_vendor ON payment_settlements(vendor_id);
+CREATE INDEX IF NOT EXISTS idx_settlement_payment ON payment_settlements(payment_id);
+CREATE INDEX IF NOT EXISTS idx_settlement_status ON payment_settlements(status);
+
+-- Create payment_disputes table for handling chargebacks/disputes
+CREATE TABLE IF NOT EXISTS payment_disputes (
+    id BIGSERIAL PRIMARY KEY,
+    payment_id BIGINT NOT NULL REFERENCES payments(id),
+    gateway_dispute_id VARCHAR UNIQUE,
+    dispute_type VARCHAR(50),
+    amount FLOAT NOT NULL,
+    reason TEXT,
+    status VARCHAR(20) DEFAULT 'open',
+    due_date TIMESTAMP,
+    resolved_at TIMESTAMP,
+    evidence JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dispute_payment ON payment_disputes(payment_id);
+CREATE INDEX IF NOT EXISTS idx_dispute_status ON payment_disputes(status);
+CREATE INDEX IF NOT EXISTS idx_dispute_gateway ON payment_disputes(gateway_dispute_id) WHERE gateway_dispute_id IS NOT NULL;
+
+-- Create functions for automatic timestamp updates
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply updated_at triggers to relevant tables
+DROP TRIGGER IF EXISTS update_payment_settings_updated_at ON payment_settings;
+CREATE TRIGGER update_payment_settings_updated_at
+    BEFORE UPDATE ON payment_settings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_payment_methods_updated_at ON payment_methods;
+CREATE TRIGGER update_payment_methods_updated_at
+    BEFORE UPDATE ON payment_methods
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_vendor_wallets_updated_at ON vendor_wallets;
+CREATE TRIGGER update_vendor_wallets_updated_at
+    BEFORE UPDATE ON vendor_wallets
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_refund_requests_updated_at ON refund_requests;
+CREATE TRIGGER update_refund_requests_updated_at
+    BEFORE UPDATE ON refund_requests
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_payment_settlements_updated_at ON payment_settlements;
+CREATE TRIGGER update_payment_settlements_updated_at
+    BEFORE UPDATE ON payment_settlements
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_payment_disputes_updated_at ON payment_disputes;
+CREATE TRIGGER update_payment_disputes_updated_at
+    BEFORE UPDATE ON payment_disputes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Add helpful comments
+COMMENT ON TABLE payment_settings IS 'Configuration settings for payment gateways';
+COMMENT ON TABLE payment_methods IS 'Available payment methods for each gateway';
+COMMENT ON TABLE payment_transactions IS 'Audit trail for all payment transactions';
+COMMENT ON TABLE refund_requests IS 'Manual refund requests and tracking';
+COMMENT ON TABLE vendor_wallets IS 'Vendor wallet balances for escrow management';
+COMMENT ON TABLE webhook_events IS 'Incoming webhook events from payment gateways';
+COMMENT ON TABLE payment_logs IS 'Audit logs for payment operations';
+COMMENT ON TABLE payment_settlements IS 'Settlement records for vendor payments';
+COMMENT ON TABLE payment_disputes IS 'Payment disputes and chargebacks';

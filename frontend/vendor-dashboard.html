@@ -219,16 +219,20 @@
               <div style="font-size:0.875rem;font-weight:600;margin-bottom:0.75rem;">Add New Account</div>
               <div id="bankFormAlert"></div>
               <div class="form-group">
-                <input type="text" id="newBankName" placeholder="Bank name (e.g. HDFC Bank)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+                <input type="text" id="newBankName" placeholder="Bank Name (e.g., HDFC Bank)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+                <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">e.g., HDFC Bank, ICICI Bank, SBI</small>
               </div>
               <div class="form-group">
-                <input type="text" id="newAccountName" placeholder="Account holder name" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+                <input type="text" id="newAccountName" placeholder="Account Holder Name (e.g., Raj Kumar)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+                <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">As per bank records (min 3 characters)</small>
               </div>
               <div class="form-group">
-                <input type="text" id="newAccountNo" placeholder="Account number" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+                <input type="text" id="newAccountNo" placeholder="Account Number (e.g., 1234567890)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+                <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">9-18 digits only</small>
               </div>
               <div class="form-group">
-                <input type="text" id="newIFSC" placeholder="IFSC code" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+                <input type="text" id="newIFSC" placeholder="IFSC Code (e.g., HDFC0001234)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+                <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">11 characters: 4 letters + 7 digits</small>
               </div>
               <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;margin-bottom:0.75rem;cursor:pointer;">
                 <input type="checkbox" id="newIsPrimary" /> Set as primary account
@@ -315,13 +319,12 @@
         <div id="profileAlert"></div>
         <form id="vendorProfileForm" onsubmit="saveVendorProfile(event)">
           <div class="form-group">
-            <label>Company Name *</label>
-            <input type="text" id="companyName" placeholder="ABC Power Solutions" required />
+            <input type="text" id="companyName" required placeholder="Company Name (e.g., ABC Power Solutions)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+            <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Min 3 characters</small>
           </div>
-          <div class="form-row">
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
             <div class="form-group">
-              <label>City *</label>
-              <select id="vendorCity" required>
+              <select id="vendorCity" required style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);">
                 <option value="">Select City</option>
                 <option value="Mumbai">Mumbai</option>
                 <option value="Thane">Thane</option>
@@ -332,27 +335,25 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Phone</label>
-              <input type="tel" id="vendorPhone" placeholder="+91 98765 43210" />
+              <input type="tel" id="vendorPhone" placeholder="Phone (e.g., 9876543210)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+              <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">10 digits only</small>
             </div>
           </div>
           <div class="form-group">
-            <label>Address</label>
-            <input type="text" id="vendorAddress" placeholder="Full address" />
+            <input type="text" id="vendorAddress" placeholder="Address (Optional)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
           </div>
           <div class="form-group">
-            <label>Company Description</label>
-            <textarea id="vendorDescription" placeholder="Tell customers about your company, experience, service areas..."></textarea>
+            <textarea id="vendorDescription" placeholder="Company Description (Optional)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);min-height:100px;resize:vertical;"></textarea>
           </div>
           <div class="form-group">
-            <label>Business Location</label>
+            <label style="display:block;font-size:0.875rem;font-weight:500;margin-bottom:0.25rem;color:#374151;">Business Location</label>
             <div style="display:flex;align-items:center;gap:0.75rem;">
-              <input type="text" id="vendorLocationDisplay" placeholder="Click to detect location" readonly style="flex:1;cursor:pointer;background:#f9fafb;" onclick="captureVendorLocation()" />
+              <input type="text" id="vendorLocationDisplay" readonly placeholder="Click to detect location" style="flex:1;cursor:pointer;background:#f9fafb;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" onclick="captureVendorLocation()" />
               <button type="button" class="btn btn-outline btn-sm" onclick="captureVendorLocation()" id="vendorLocBtn">📍 Detect</button>
             </div>
             <input type="hidden" id="vendorLatitude" />
             <input type="hidden" id="vendorLongitude" />
-            <small style="color:var(--text-light);">Used so customers nearby can find you (within 5–25 km radius)</small>
+            <small style="color:var(--text-light);font-size:0.75rem;">Used so customers nearby can find you (within 5–25 km radius)</small>
           </div>
           <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Profile</button>
         </form>
@@ -531,6 +532,6 @@
 
 <script src="/static/js/api.js?v=2"></script>
 <script src="/static/js/vendor.js?v=2"></script>
-<script src="/static/js/vendor-equipment.js"></script>
+<script src="/static/js/vendor-equipment.js?v=4"></script>
 </body>
 </html>
