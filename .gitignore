@@ -8,9 +8,6 @@ bin/
 *.test
 *.out
 
-# Go workspace file
-go.work.sum
-
 # Test binary, built with `go test -c`
 *.test
 
@@ -34,9 +31,8 @@ vendor/
 *.so
 *.dylib
 
-# Migration binaries
-migrate
-backend/migrate
+# Migration binaries (but keep migration SQL files)
+migrate/migrate
 
 # Database files
 *.db
