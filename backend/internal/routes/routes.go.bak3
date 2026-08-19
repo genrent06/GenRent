@@ -41,7 +41,7 @@ func RegisterAllRoutes(r *gin.Engine, cfg *Config) {
 			vendors := protected.Group("/")
 			vendors.Use(middleware.VendorOnly())
 			{
-				registerVendorRoutes(vendors, cfg, categoryHandler)
+				registerVendorRoutes(api, cfg, categoryHandler)
 			}
 
 			// Admin routes
@@ -465,7 +465,7 @@ func registerVendorRoutes(api *gin.RouterGroup, cfg *Config, categoryHandler *ha
 	{
 		vendorProfile.GET("", handlers.GetMyVendorProfile(cfg.DB))
 		vendorProfile.PUT("", handlers.UpdateVendorProfile(cfg.DB))
-		vendorProfile.POST("", handlers.CreateVendor(cfg.DB))
+			vendorProfile.POST("", handlers.CreateVendor(cfg.DB))
 		vendorProfile.POST("/verification", func(c *gin.Context) {
 			// Submit vendor verification
 			c.JSON(200, gin.H{"message": "Verification submitted"})

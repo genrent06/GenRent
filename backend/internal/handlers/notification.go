@@ -17,6 +17,7 @@ var emailCfg email.Config
 // InitEmail wires the email config into the handlers package.
 func InitEmail(cfg email.Config) {
 	emailCfg = cfg
+	email.InitConfig(cfg) // Initialize global config for email templates
 }
 
 // GetNotifications — returns all notifications for the logged-in user (unread first)

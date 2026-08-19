@@ -14,6 +14,7 @@ type Config struct {
 	JWTSecret      string
 	Env            string
 	AllowedOrigins string // comma-separated, e.g. "https://genrent.com,https://app.genrent.com"
+	BaseURL        string // Base URL for email links, e.g. "https://genrent.in"
 
 	// SMTP / Email
 	SMTPHost     string
@@ -58,6 +59,7 @@ func Load() *Config {
 
 	smtpHost := getEnv("SMTP_HOST", "localhost")
 	smtpPort := getEnv("SMTP_PORT", "25")
+	baseURL := getEnv("BASE_URL", "http://localhost:8080")
 
 	return &Config{
 		Port:           getEnv("PORT", "8080"),
@@ -65,6 +67,7 @@ func Load() *Config {
 		JWTSecret:      jwtSecret,
 		Env:            env,
 		AllowedOrigins: getEnv("ALLOWED_ORIGINS", "*"),
+		BaseURL:        baseURL,
 
 		SMTPHost:     smtpHost,
 		SMTPPort:     smtpPort,

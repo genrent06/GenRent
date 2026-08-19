@@ -355,7 +355,7 @@
             <input type="hidden" id="vendorLongitude" />
             <small style="color:var(--text-light);font-size:0.75rem;">Used so customers nearby can find you (within 5–25 km radius)</small>
           </div>
-          <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Profile</button>
+          <button type="button" class="btn btn-primary" id="saveProfileBtn" onclick="if(this.disabled){return false;}if(typeof isSaveLocked!=='undefined'&&isSaveLocked){return false;}this.disabled=true;this.textContent='⏳ Saving...';handleSaveProfileClick();">Save Profile</button>
         </form>
       </div>
     </div>
@@ -375,41 +375,41 @@
       <form id="generatorForm" onsubmit="saveGenerator(event)">
         <input type="hidden" id="generatorId" />
         <div class="form-group">
-          <label>Equipment Name *</label>
-          <input type="text" id="genName" placeholder="e.g. Kirloskar 50kVA Silent DG" required />
+          <input type="text" id="genName" placeholder="Equipment Name (e.g., Kirloskar 50kVA Silent DG)" required style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+          <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Min 3 characters</small>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Capacity (kVA) *</label>
-            <input type="number" id="genCapacity" placeholder="50" required min="1" />
+            <input type="number" id="genCapacity" placeholder="Capacity kVA (e.g., 50)" required min="1" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+            <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Min 1 kVA</small>
           </div>
           <div class="form-group">
-            <label>Brand</label>
-            <input type="text" id="genBrand" placeholder="Kirloskar, Cummins, etc." />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Price / Day (₹) *</label>
-            <input type="number" id="genPriceDay" placeholder="1500" required min="1" />
-          </div>
-          <div class="form-group">
-            <label>Price / Month (₹)</label>
-            <input type="number" id="genPriceMonth" placeholder="30000" min="1" />
+            <input type="text" id="genBrand" placeholder="Brand (e.g., Kirloskar)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+            <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">e.g., Kirloskar, Cummins, etc.</small>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Fuel Type</label>
-            <select id="genFuel">
+            <input type="number" id="genPriceDay" placeholder="Price / Day ₹ (e.g., 1500)" required min="1" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+            <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Min ₹1/day</small>
+          </div>
+          <div class="form-group">
+            <input type="number" id="genPriceMonth" placeholder="Price / Month ₹ (e.g., 30000)" min="1" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+            <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Optional monthly price</small>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <select id="genFuel" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);">
+              <option value="">Fuel Type</option>
               <option value="diesel">Diesel</option>
               <option value="petrol">Petrol</option>
               <option value="gas">Gas</option>
             </select>
+            <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Select fuel type</small>
           </div>
           <div class="form-group">
-            <label>City *</label>
-            <select id="genCity" required>
+            <select id="genCity" required style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);">
               <option value="">Select City</option>
               <option value="Mumbai">Mumbai</option>
               <option value="Thane">Thane</option>
@@ -418,25 +418,26 @@
               <option value="Delhi">Delhi</option>
               <option value="Bangalore">Bangalore</option>
             </select>
+            <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Required field</small>
           </div>
         </div>
         <div class="form-group">
-          <label>Location / Area *</label>
-          <input type="text" id="genLocation" placeholder="e.g. Andheri West, Mumbai" required />
+          <input type="text" id="genLocation" placeholder="Location / Area (e.g., Andheri West, Mumbai)" required style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" />
+          <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Area in your city</small>
         </div>
         <div class="form-group">
-          <label>Equipment GPS Location</label>
+          <label style="display:block;font-size:0.875rem;font-weight:500;margin-bottom:0.25rem;color:#374151;">Equipment GPS Location</label>
           <div style="display:flex;align-items:center;gap:0.75rem;">
-            <input type="text" id="genLocationDisplay" placeholder="Click to detect current location" readonly style="flex:1;cursor:pointer;background:#f9fafb;" onclick="captureGenLocation()" />
+            <input type="text" id="genLocationDisplay" readonly placeholder="Click to detect current location" style="flex:1;cursor:pointer;background:#f9fafb;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);" onclick="captureGenLocation()" />
             <button type="button" class="btn btn-outline btn-sm" onclick="captureGenLocation()" id="genLocBtn">📍 Detect</button>
           </div>
           <input type="hidden" id="genLatitude" />
           <input type="hidden" id="genLongitude" />
-          <small style="color:var(--text-light);">Helps customers search equipment near their area</small>
+          <small style="color:var(--text-light);font-size:0.75rem;">Helps customers search equipment near their area</small>
         </div>
         <div class="form-group">
-          <label>Description</label>
-          <textarea id="genDesc" placeholder="Silent generator, includes fuel tank, operator available..."></textarea>
+          <textarea id="genDesc" placeholder="Description (e.g., Silent generator, includes fuel tank...)" style="width:100%;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius);min-height:80px;resize:vertical;"></textarea>
+          <small class="field-hint" style="color:#6b7280;font-size:0.75rem;display:none;">Optional details about your equipment</small>
         </div>
       </form>
     </div>
@@ -530,8 +531,8 @@
 
 <div class="toast-container" id="toastContainer"></div>
 
-<script src="/static/js/api.js?v=2"></script>
-<script src="/static/js/vendor.js?v=2"></script>
-<script src="/static/js/vendor-equipment.js?v=4"></script>
+<script src="/static/js/api.js?v=4"></script>
+<script src="/static/js/vendor.js?v=14"></script>
+<script src="/static/js/vendor-equipment.js?v=5"></script>
 </body>
 </html>

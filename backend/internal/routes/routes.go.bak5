@@ -41,7 +41,7 @@ func RegisterAllRoutes(r *gin.Engine, cfg *Config) {
 			vendors := protected.Group("/")
 			vendors.Use(middleware.VendorOnly())
 			{
-				registerVendorRoutes(vendors, cfg, categoryHandler)
+				registerVendorRoutes(api, cfg, categoryHandler)
 			}
 
 			// Admin routes

@@ -1,15 +1,55 @@
 package handlers
 
 import (
+	"fmt"
 	"genrent/internal/middleware"
 	"genrent/internal/models"
 	"net/http"
 	"regexp"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+// Server-side deduplication cache to prevent rapid duplicate requests
+type RequestCache struct {
+	mu    sync.RWMutex
+	cache map[string]time.Time
+}
+
+func (r *RequestCache) Check(key string, ttl time.Duration) bool {
+	r.mu.RLock()
+	timestamp, exists := r.cache[key]
+	r.mu.RUnlock()
+
+	if !exists {
+		return false // Not a duplicate
+	}
+
+	// Check if the TTL has expired
+	if time.Since(timestamp) > ttl {
+		r.mu.Lock()
+		delete(r.cache, key)
+		r.mu.Unlock()
+		return false // Expired, not a duplicate
+	}
+
+	return true // Duplicate within TTL
+}
+
+func (r *RequestCache) Add(key string) {
+	r.mu.Lock()
+	r.cache[key] = time.Now()
+	r.mu.Unlock()
+}
+
+// Global request cache for vendor profile updates
+var vendorUpdateCache = &RequestCache{
+	cache: make(map[string]time.Time),
+}
 
 // Phone validation pattern for Indian phone numbers
 var phonePattern = regexp.MustCompile(`^(\+91[-\s]?)?[6-9]\d{9}$`)
@@ -111,16 +151,36 @@ func GetMyVendorProfile(db *gorm.DB) gin.HandlerFunc {
 func UpdateVendorProfile(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := middleware.GetUserID(c)
+
+		// SERVER-SIDE DEDUPLICATION: Create a unique key based on user ID and request data
+		var req CreateVendorRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": ValidationError(err), "errors": ValidationErrors(err)})
+			return
+		}
+
+		// Create cache key from user ID + request content
+		cacheKey := fmt.Sprintf("vendor_update_%d_%s", userID,
+			fmt.Sprintf("%s|%s|%s|%s|%f|%f|%s",
+				req.CompanyName, req.City, req.Phone, req.Address,
+				req.Latitude, req.Longitude, req.Description))
+
+		// Check for duplicate request within 10 seconds
+		if vendorUpdateCache.Check(cacheKey, 10*time.Second) {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error": "Please wait before saving again",
+				"message": "Duplicate request detected",
+			})
+			return
+		}
+
+		// Add this request to cache
+		vendorUpdateCache.Add(cacheKey)
+
 		var vendor models.Vendor
 		result := db.Where("user_id = ?", userID).First(&vendor)
 		if result.Error != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "vendor profile not found"})
-			return
-		}
-
-		var req CreateVendorRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": ValidationError(err), "errors": ValidationErrors(err)})
 			return
 		}
 

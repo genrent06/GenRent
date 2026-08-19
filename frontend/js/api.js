@@ -121,9 +121,9 @@ const api = {
     return api.get(`/vendors${query ? '?' + query : ''}`, false);
   },
   getVendor: (id) => api.get(`/vendors/${id}`, false),
-  createVendor: (data) => api.post('/vendors', data, true),
-  getMyVendorProfile: () => api.get('/vendors/me'),
-  updateVendorProfile: (data) => api.put('/vendors/me', data),
+  createVendor: (data) => api.post('/vendor/profile', data, true),
+  getMyVendorProfile: () => api.get('/vendor/profile'),
+  updateVendorProfile: (data) => api.put('/vendor/profile', data),
 
   // Bookings
   createBooking: (data) => api.post('/bookings', data, true),
@@ -137,7 +137,7 @@ const api = {
   processPayment: (data) => api.post('/payments', data, true),
 
   // Vendor Wallet
-  getVendorWallet: () => api.get('/wallet'),
+  getVendorWallet: () => api.get('/vendor/wallet'),
 
   // Notifications
   getNotifications: () => api.get('/notifications'),

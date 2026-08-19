@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -208,11 +207,11 @@ func TestEscrowService_HoldFunds(t *testing.T) {
 	paymentID := uint64(1)
 	bookingID := uint64(100)
 	err = db.Table("payments").Create(map[string]interface{}{
-		"id":          paymentID,
-		"booking_id":  bookingID,
+		"id":           paymentID,
+		"booking_id":   bookingID,
 		"total_amount": 1000.00,
-		"status":      "paid",
-		"created_at":  time.Now(),
+		"status":       "paid",
+		"created_at":   time.Now(),
 	}).Error
 	assert.NoError(t, err)
 
@@ -227,7 +226,7 @@ func TestEscrowService_HoldFunds(t *testing.T) {
 
 	// Verify payment status changed to escrow
 	var payment struct {
-		Status      string
+		Status       string
 		EscrowHeldAt *time.Time
 	}
 	err = db.Table("payments").
@@ -292,13 +291,13 @@ func TestEscrowService_ReleaseFunds(t *testing.T) {
 	bookingID := uint64(100)
 	vendorID := uint64(500)
 	err = db.Table("payments").Create(map[string]interface{}{
-		"id":          paymentID,
-		"booking_id":  bookingID,
-		"total_amount": 1000.00,
-		"status":      "escrow",
-		"vendor_id":   vendorID,
+		"id":             paymentID,
+		"booking_id":     bookingID,
+		"total_amount":   1000.00,
+		"status":         "escrow",
+		"vendor_id":      vendorID,
 		"escrow_held_at": time.Now(),
-		"created_at":  time.Now(),
+		"created_at":     time.Now(),
 	}).Error
 	assert.NoError(t, err)
 
@@ -325,7 +324,7 @@ func TestEscrowService_ReleaseFunds(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "completed", payment.Status)
 	assert.NotNil(t, payment.EscrowReleasedAt)
-	assert.Equal(t, 900.0, payment.VendorAmount)  // 1000 - 10% = 900
+	assert.Equal(t, 900.0, payment.VendorAmount) // 1000 - 10% = 900
 	assert.Equal(t, 100.0, payment.PlatformFee)  // 10% of 1000
 
 	// Verify vendor wallet balance updated
@@ -382,13 +381,13 @@ func TestRefundService(t *testing.T) {
 	paymentID := uint64(1)
 	bookingID := uint64(100)
 	err = db.Table("payments").Create(map[string]interface{}{
-		"id":                paymentID,
-		"booking_id":        bookingID,
-		"total_amount":      1000.00,
-		"status":           "escrow",
-		"gateway":          "razorpay",
+		"id":                 paymentID,
+		"booking_id":         bookingID,
+		"total_amount":       1000.00,
+		"status":             "escrow",
+		"gateway":            "razorpay",
 		"gateway_payment_id": "pay_test123",
-		"created_at":       time.Now(),
+		"created_at":         time.Now(),
 	}).Error
 	assert.NoError(t, err)
 
@@ -433,8 +432,8 @@ func TestCalculatePartialRefund(t *testing.T) {
 	// Insert test payment
 	bookingID := uint64(100)
 	err = db.Table("payments").Create(map[string]interface{}{
-		"booking_id":    bookingID,
-		"total_amount":  1000.00,
+		"booking_id":   bookingID,
+		"total_amount": 1000.00,
 		"status":       "paid",
 		"created_at":   time.Now(),
 	}).Error
@@ -589,16 +588,16 @@ func TestValidatePaymentAmount(t *testing.T) {
 		service := NewRazorpayService("test_key", "test_secret", "webhook_secret", true, 900)
 
 		assert.NoError(t, service.ValidatePaymentAmount(100.00))
-		assert.Error(t, service.ValidatePaymentAmount(0.50))  // Below minimum
-		assert.Error(t, service.ValidatePaymentAmount(2000000.00))  // Above maximum
+		assert.Error(t, service.ValidatePaymentAmount(0.50))       // Below minimum
+		assert.Error(t, service.ValidatePaymentAmount(2000000.00)) // Above maximum
 	})
 
 	t.Run("Stripe amount validation", func(t *testing.T) {
 		service := NewStripeService("test_key", "test_secret", true, 900)
 
 		assert.NoError(t, service.ValidatePaymentAmount(100.00))
-		assert.Error(t, service.ValidatePaymentAmount(0.25))  // Below minimum
-		assert.Error(t, service.ValidatePaymentAmount(2000000.00))  // Above maximum
+		assert.Error(t, service.ValidatePaymentAmount(0.25))       // Below minimum
+		assert.Error(t, service.ValidatePaymentAmount(2000000.00)) // Above maximum
 	})
 }
 
@@ -638,12 +637,12 @@ func (m *MockPaymentGateway) ProcessRefund(ctx context.Context, paymentID string
 func (m *MockPaymentGateway) GetPaymentMethods(ctx context.Context) ([]PaymentMethod, error) {
 	return []PaymentMethod{
 		{
-			Name:        "UPI",
-			Gateway:     "mock",
-			MethodType:  "upi",
-			DisplayName: "UPI Payment",
-			IconURL:     "/static/icons/upi.png",
-			IsEnabled:   true,
+			Name:         "UPI",
+			Gateway:      "mock",
+			MethodType:   "upi",
+			DisplayName:  "UPI Payment",
+			IconURL:      "/static/icons/upi.png",
+			IsEnabled:    true,
 			DisplayOrder: 1,
 		},
 	}, nil

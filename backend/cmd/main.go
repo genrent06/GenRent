@@ -47,6 +47,7 @@ func main() {
 		From:     cfg.SMTPFrom,
 		FromName: cfg.SMTPFromName,
 		Enabled:  cfg.EmailEnabled,
+		BaseURL:  cfg.BaseURL,
 	})
 
 	if cfg.Env == "production" {

@@ -1,8 +1,130 @@
 // GenRent Vendor Dashboard JavaScript
+console.log('🚀 vendor.js LOADED - Version 13 (Fixed API Endpoints)');
 
 let currentSection = 'overview';
 let editingGeneratorId = null;
 let vendorProfile = null;
+let lastSaveTime = 0; // Debounce: prevent saves within 2 seconds
+const SAVE_COOLDOWN = 2000; // 2 seconds between saves
+
+// Bulletproof save handler - prevents all duplicate clicks
+function handleSaveProfileClick() {
+  const btn = document.getElementById('saveProfileBtn');
+
+  console.log('handleSaveProfileClick called, isSaveLocked:', isSaveLocked);
+
+  // CRITICAL: Check global lock FIRST - before anything else
+  if (isSaveLocked) {
+    console.log('❌ SAVE BLOCKED - Save already in progress');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ Saving...';
+    }
+    return;
+  }
+
+  // Check if button is already disabled
+  if (btn && btn.disabled) {
+    console.log('❌ SAVE BLOCKED - Button already disabled');
+    return;
+  }
+
+  const now = Date.now();
+
+  // Prevent clicks within cooldown period
+  if (now - lastSaveTime < SAVE_COOLDOWN) {
+    console.log('❌ SAVE BLOCKED - Cooldown active, please wait');
+    showToast('Please wait before saving again', 'error');
+    return;
+  }
+
+  // SET THE LOCK IMMEDIATELY - before any async operations
+  isSaveLocked = true;
+  console.log('🔒 SAVE LOCKED - Starting save process');
+
+  // Disable button immediately
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ Saving...';
+  }
+
+  // Trigger the save
+  console.log('Triggering save...');
+  const form = document.getElementById('vendorProfileForm');
+  if (form) {
+    // Create and dispatch submit event
+    const event = new Event('submit', { bubbles: true, cancelable: true });
+    form.dispatchEvent(event);
+  }
+
+  lastSaveTime = now;
+}
+
+// ==================== VALIDATION HELPER FUNCTIONS ====================
+// These must be defined before functions that use them
+
+function validateIFSC(ifsc) {
+  // IFSC should be 11 characters: 4 letters (bank code) + 7 characters (branch code)
+  // Format: XXXX0123456 (e.g., HDFC0001234, SBIN0001234)
+  const ifscPattern = /^[A-Z]{4}[0-9A-Z]{7}$/;
+  return ifscPattern.test(ifsc.toUpperCase());
+}
+
+function validateAccountNumber(accountNo) {
+  // Account number should be numeric, 9-18 digits
+  const accountPattern = /^\d{9,18}$/;
+  return accountPattern.test(accountNo);
+}
+
+function validateBankName(bankName) {
+  // Bank name should be at least 3 characters, letters and spaces only
+  const namePattern = /^[a-zA-Z\s]{3,}$/;
+  return namePattern.test(bankName.trim());
+}
+
+function validateAccountHolderName(accountName) {
+  // Account holder name should be at least 3 characters
+  return accountName.trim().length >= 3;
+}
+
+function validatePhoneNumber(phone) {
+  // Indian phone number: starts with 6-9, total 10 digits
+  // Can optionally have +91 prefix or spaces
+  const phonePattern = /^(\+91[-\s]?)?[6-9]\d{9}$/;
+  return phonePattern.test(phone.replace(/\s/g, ''));
+}
+
+// Show field-level error
+function showFieldError(fieldId, message) {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  // Remove existing error
+  const existingError = field.parentElement.querySelector('.field-error');
+  if (existingError) existingError.remove();
+
+  // Add error message
+  const error = document.createElement('div');
+  error.className = 'field-error';
+  error.style.cssText = 'color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem; font-weight: 500;';
+  error.textContent = message;
+  field.parentElement.appendChild(error);
+
+  // Add red border to field
+  field.style.borderColor = '#dc2626';
+}
+
+// Clear field-level error
+function clearFieldError(fieldId) {
+  const field = document.getElementById(fieldId);
+  if (!field) return;
+
+  const existingError = field.parentElement.querySelector('.field-error');
+  if (existingError) existingError.remove();
+
+  // Don't reset border - let the validation state show through
+}
+// ==================== END VALIDATION HELPERS ====================
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!isLoggedIn()) {
@@ -65,6 +187,30 @@ function populateProfileForm() {
     document.getElementById('vendorLongitude').value = vendorProfile.longitude;
     document.getElementById('vendorLocationDisplay').value = `${vendorProfile.latitude.toFixed(5)}, ${vendorProfile.longitude.toFixed(5)}`;
   }
+
+  // Store original data for change detection
+  originalProfileData = {
+    company_name: vendorProfile.company_name || '',
+    city: vendorProfile.city || '',
+    phone: vendorProfile.phone || '',
+    address: vendorProfile.address || '',
+    description: vendorProfile.description || '',
+    latitude: vendorProfile.latitude || 0,
+    longitude: vendorProfile.longitude || 0,
+  };
+
+  // Setup change detection for all form fields
+  const formFields = ['companyName', 'vendorCity', 'vendorPhone', 'vendorAddress', 'vendorDescription', 'vendorLatitude', 'vendorLongitude'];
+  formFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      field.addEventListener('input', updateSaveButtonState);
+      field.addEventListener('change', updateSaveButtonState);
+    }
+  });
+
+  // Initial button state
+  updateSaveButtonState();
 }
 
 function captureVendorLocation() {
@@ -117,21 +263,90 @@ function captureGenLocation() {
   );
 }
 
-let isSavingProfile = false; // Prevent duplicate submissions
+// Module-level flag to prevent duplicate submissions
+let isSavingProfile = false;
+let originalProfileData = {}; // Store original data to detect changes
+let isSaveLocked = false; // Global lock - checked BEFORE any save operation
+const SAVE_LOCK_DURATION = 3000; // Keep lock for 3 seconds after save
+
+// Function to check if form has changes
+function hasProfileChanges() {
+  const currentData = {
+    company_name: document.getElementById('companyName').value.trim(),
+    city: document.getElementById('vendorCity').value,
+    phone: document.getElementById('vendorPhone').value.trim(),
+    address: document.getElementById('vendorAddress').value.trim(),
+    description: document.getElementById('vendorDescription').value.trim(),
+    latitude: document.getElementById('vendorLatitude').value,
+    longitude: document.getElementById('vendorLongitude').value,
+  };
+
+  // Compare with original data
+  const hasChanges = JSON.stringify(currentData) !== JSON.stringify(originalProfileData);
+  console.log('🔍 Checking for changes:', hasChanges);
+  console.log('   Current:', JSON.stringify(currentData));
+  console.log('   Original:', JSON.stringify(originalProfileData));
+  return hasChanges;
+}
+
+// Function to update Save button state based on changes
+function updateSaveButtonState() {
+  const btn = document.getElementById('saveProfileBtn');
+  if (!btn) return;
+
+  if (hasProfileChanges()) {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    btn.textContent = 'Save Profile';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+    btn.textContent = 'No Changes';
+  }
+}
 
 async function saveVendorProfile(event) {
-  event.preventDefault();
+  if (event) event.preventDefault();
 
-  // Prevent duplicate submissions
-  if (isSavingProfile) {
-    showAlert('profileAlert', 'Please wait, saving profile...', 'error');
+  const btn = document.getElementById('saveProfileBtn');
+
+  console.log('📝 saveVendorProfile called');
+  console.log('   - isSaveLocked:', isSaveLocked);
+  console.log('   - isSavingProfile:', isSavingProfile);
+
+  // CRITICAL: Check global lock FIRST
+  if (!isSaveLocked) {
+    console.log('⚠️ saveVendorProfile called without lock - this should not happen!');
     return;
   }
 
+  // Additional protection - check if already saving
+  if (isSavingProfile) {
+    console.log('❌ Already saving, ignoring duplicate submission');
+    return;
+  }
+
+  // Disable button immediately - this is critical
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'not-allowed';
+    btn.textContent = '⏳ Saving...';
+  }
+
+  isSavingProfile = true;
+  lastSaveTime = Date.now(); // Update last save time
+
   clearAlert('profileAlert');
 
-  // Clear previous field errors
-  ['companyName', 'vendorCity', 'vendorPhone', 'vendorAddress', 'vendorDescription'].forEach(clearFieldError);
+  // Clear previous field errors and reset borders
+  ['companyName', 'vendorCity', 'vendorPhone', 'vendorAddress', 'vendorDescription'].forEach(id => {
+    clearFieldError(id);
+    const field = document.getElementById(id);
+    if (field) field.style.borderColor = '';
+  });
 
   const companyName = document.getElementById('companyName').value.trim();
   const city = document.getElementById('vendorCity').value;
@@ -164,6 +379,15 @@ async function saveVendorProfile(event) {
 
   if (hasError) {
     showAlert('profileAlert', 'Please fix the validation errors below', 'error');
+    // Re-enable button on validation error
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    btn.textContent = 'Save Profile';
+    isSavingProfile = false;
+    // CRITICAL: Release the lock immediately on validation error
+    isSaveLocked = false;
+    console.log('🔓 SAVE LOCK RELEASED (validation error)');
     return;
   }
 
@@ -179,14 +403,15 @@ async function saveVendorProfile(event) {
     longitude: isNaN(lng) ? 0 : lng,
   };
 
-  const btn = document.getElementById('saveProfileBtn');
-  btn.disabled = true;
   btn.textContent = 'Saving...';
-  isSavingProfile = true;
+
+  console.log('📤 Sending data to API:', JSON.stringify(data, null, 2));
 
   try {
     if (vendorProfile) {
+      console.log('🔄 Updating existing vendor profile');
       vendorProfile = await api.updateVendorProfile(data);
+      console.log('✅ Update successful, response:', vendorProfile);
     } else {
       try {
         vendorProfile = await api.createVendor(data);
@@ -205,12 +430,36 @@ async function saveVendorProfile(event) {
     showAlert('profileAlert', '✅ Profile saved successfully!', 'success');
     document.getElementById('setupBanner').style.display = 'none';
     showToast('Profile saved!', 'success');
+
+    // Update original data to current values (so form appears unchanged)
+    originalProfileData = {
+      company_name: companyName,
+      city: city,
+      phone: phone,
+      address: address,
+      description: description,
+      latitude: isNaN(lat) ? 0 : lat,
+      longitude: isNaN(lng) ? 0 : lng,
+    };
+    console.log('💾 Updated originalProfileData:', JSON.stringify(originalProfileData, null, 2));
   } catch (err) {
     showAlert('profileAlert', err.message, 'error');
   } finally {
-    btn.disabled = false;
-    btn.textContent = 'Save Profile';
+    // Always reset saving state
     isSavingProfile = false;
+
+    // Release the global lock after a delay to prevent rapid resubmission
+    setTimeout(() => {
+      isSaveLocked = false;
+      console.log('🔓 SAVE LOCK RELEASED');
+      // Update button state based on whether there are unsaved changes
+      updateSaveButtonState();
+    }, SAVE_LOCK_DURATION);
+
+    // If button still shows "Saving..." after the delay, update it
+    setTimeout(() => {
+      updateSaveButtonState();
+    }, SAVE_LOCK_DURATION);
   }
 }
 
@@ -317,12 +566,19 @@ function hideAddBankForm() {
 
 // Real-time validation for bank account fields
 function setupBankFieldValidation() {
+  console.log('Setting up bank field validation...');
+
   const bankNameField = document.getElementById('newBankName');
   const accountNameField = document.getElementById('newAccountName');
   const accountNoField = document.getElementById('newAccountNo');
   const ifscField = document.getElementById('newIFSC');
 
-  if (!bankNameField) return;
+  if (!bankNameField) {
+    console.log('Bank name field not found!');
+    return;
+  }
+
+  console.log('Found all bank fields, setting up validation...');
 
   // Helper function to show hint and hide placeholder
   function setupFloatingHint(input, hintSelector) {
@@ -357,6 +613,7 @@ function setupBankFieldValidation() {
   // Bank name validation
   bankNameField.addEventListener('input', function() {
     const value = this.value.trim();
+    console.log('Bank name input:', value, 'valid?', validateBankName(value));
     if (value && validateBankName(value)) {
       this.style.borderColor = '#16a34a'; // Green - Valid
     } else if (value) {
@@ -369,6 +626,7 @@ function setupBankFieldValidation() {
   // Account holder name validation
   accountNameField.addEventListener('input', function() {
     const value = this.value.trim();
+    console.log('Account name input:', value);
     if (value && validateAccountHolderName(value)) {
       this.style.borderColor = '#16a34a'; // Green - Valid
     } else if (value) {
@@ -385,6 +643,7 @@ function setupBankFieldValidation() {
     this.value = digitsOnly;
 
     const value = this.value.trim();
+    console.log('Account number input:', value, 'valid?', validateAccountNumber(value));
     if (value && validateAccountNumber(value)) {
       this.style.borderColor = '#16a34a'; // Green - Valid
     } else if (value && value.length >= 9) {
@@ -402,6 +661,7 @@ function setupBankFieldValidation() {
     this.value = this.value.toUpperCase();
 
     const value = this.value.trim();
+    console.log('IFSC input:', value, 'valid?', validateIFSC(value));
     if (value && validateIFSC(value)) {
       this.style.borderColor = '#16a34a'; // Green - Valid
     } else if (value && value.length >= 8) {
@@ -412,14 +672,23 @@ function setupBankFieldValidation() {
       this.style.borderColor = ''; // Empty - default
     }
   });
+
+  console.log('Bank field validation setup complete!');
 }
 
 // Real-time validation for profile fields
 function setupProfileFieldValidation() {
+  console.log('Setting up profile field validation...');
+
   const companyNameField = document.getElementById('companyName');
   const phoneField = document.getElementById('vendorPhone');
 
-  if (!companyNameField) return;
+  if (!companyNameField) {
+    console.log('Company name field not found!');
+    return;
+  }
+
+  console.log('Found company name field, setting up validation...');
 
   // Setup floating hints
   companyNameField.parentElement.querySelectorAll('.field-hint').forEach(hint => {
@@ -436,18 +705,23 @@ function setupProfileFieldValidation() {
 
   // Company name validation
   companyNameField.addEventListener('input', function() {
+    console.log('Company name input event fired, value:', this.value);
     const value = this.value.trim();
     if (value && value.length >= 3) {
+      console.log('Setting GREEN border (valid)');
       this.style.borderColor = '#16a34a'; // Green - Valid
     } else if (value) {
+      console.log('Setting YELLOW border (needs more chars)');
       this.style.borderColor = '#f59e0b'; // Yellow - Needs more chars
     } else {
+      console.log('Clearing border (empty)');
       this.style.borderColor = ''; // Empty - default
     }
   });
 
   // Phone validation with floating hint
   if (phoneField) {
+    console.log('Found phone field, setting up validation...');
     const phoneHint = phoneField.parentElement.querySelector('.field-hint');
     if (phoneHint) {
       phoneField.addEventListener('focus', function() {
@@ -462,16 +736,22 @@ function setupProfileFieldValidation() {
     }
 
     phoneField.addEventListener('input', function() {
+      console.log('Phone input event fired, value:', this.value);
       const value = this.value.trim();
       if (!value) {
+        console.log('Clearing phone border (empty)');
         this.style.borderColor = ''; // Empty - default
       } else if (validatePhoneNumber(value)) {
+        console.log('Setting GREEN border for phone (valid)');
         this.style.borderColor = '#16a34a'; // Green - Valid
       } else {
+        console.log('Setting RED border for phone (invalid)');
         this.style.borderColor = '#dc2626'; // Red - Invalid
       }
     });
   }
+
+  console.log('Profile field validation setup complete!');
 }
 
 // Call setup when profile section is shown
@@ -483,67 +763,79 @@ showSection = function(name) {
   }
 };
 
-// Validation helper functions
-function validateIFSC(ifsc) {
-  // IFSC should be 11 characters: 4 letters (bank code) + 7 characters (branch code)
-  // Format: XXXX0123456 (e.g., HDFC0001234, SBIN0001234)
-  const ifscPattern = /^[A-Z]{4}[0-9A-Z]{7}$/;
-  return ifscPattern.test(ifsc.toUpperCase());
-}
+// Equipment form validation
+function setupEquipmentFieldValidation() {
+  const fields = ['genName', 'genCapacity', 'genBrand', 'genPriceDay', 'genPriceMonth', 'genLocation', 'genDesc'];
+  const selectFields = ['genFuel', 'genCity'];
 
-function validateAccountNumber(accountNo) {
-  // Account number should be numeric, 9-18 digits
-  const accountPattern = /^\d{9,18}$/;
-  return accountPattern.test(accountNo);
-}
+  // Setup floating hints and validation for text inputs
+  fields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
 
-function validateBankName(bankName) {
-  // Bank name should be at least 3 characters, letters and spaces only
-  const namePattern = /^[a-zA-Z\s]{3,}$/;
-  return namePattern.test(bankName.trim());
-}
+    // Setup floating hint
+    const hint = field.parentElement.querySelector('.field-hint');
+    if (hint) {
+      field.addEventListener('focus', function() {
+        if (!this.value) hint.style.display = 'block';
+      });
+      field.addEventListener('input', function() {
+        if (this.value) hint.style.display = 'block';
+      });
+      field.addEventListener('blur', function() {
+        if (!this.value) hint.style.display = 'none';
+      });
+    }
 
-function validateAccountHolderName(accountName) {
-  // Account holder name should be at least 3 characters
-  return accountName.trim().length >= 3;
-}
+    // Add validation based on field type
+    if (fieldId === 'genName') {
+      field.addEventListener('input', function() {
+        const value = this.value.trim();
+        if (value && value.length >= 3) {
+          this.style.borderColor = '#16a34a'; // Green - Valid
+        } else if (value) {
+          this.style.borderColor = '#f59e0b'; // Yellow - Needs more
+        } else {
+          this.style.borderColor = ''; // Empty
+        }
+      });
+    } else if (fieldId === 'genCapacity' || fieldId === 'genPriceDay' || fieldId === 'genPriceMonth') {
+      field.addEventListener('input', function() {
+        const value = parseFloat(this.value);
+        if (value && value > 0) {
+          this.style.borderColor = '#16a34a'; // Green - Valid
+        } else if (this.value) {
+          this.style.borderColor = '#dc2626'; // Red - Invalid
+        } else {
+          this.style.borderColor = ''; // Empty
+        }
+      });
+    } else if (fieldId === 'genBrand' || fieldId === 'genLocation') {
+      field.addEventListener('input', function() {
+        const value = this.value.trim();
+        if (value && value.length >= 2) {
+          this.style.borderColor = '#16a34a'; // Green - Valid
+        } else if (value) {
+          this.style.borderColor = '#f59e0b'; // Yellow - Needs more
+        } else {
+          this.style.borderColor = ''; // Empty
+        }
+      });
+    }
+  });
 
-function validatePhoneNumber(phone) {
-  // Indian phone number: starts with 6-9, total 10 digits
-  // Can optionally have +91 prefix or spaces
-  const phonePattern = /^(\+91[-\s]?)?[6-9]\d{9}$/;
-  return phonePattern.test(phone.replace(/\s/g, ''));
-}
+  // Setup hints for select dropdowns
+  selectFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
 
-// Show field-level error
-function showFieldError(fieldId, message) {
-  const field = document.getElementById(fieldId);
-  if (!field) return;
-
-  // Remove existing error
-  const existingError = field.parentElement.querySelector('.field-error');
-  if (existingError) existingError.remove();
-
-  // Add error message
-  const error = document.createElement('div');
-  error.className = 'field-error';
-  error.style.cssText = 'color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem; font-weight: 500;';
-  error.textContent = message;
-  field.parentElement.appendChild(error);
-
-  // Add red border to field
-  field.style.borderColor = '#dc2626';
-}
-
-// Clear field-level error
-function clearFieldError(fieldId) {
-  const field = document.getElementById(fieldId);
-  if (!field) return;
-
-  const existingError = field.parentElement.querySelector('.field-error');
-  if (existingError) existingError.remove();
-
-  // Don't reset border - let the validation state show through
+    const hint = field.parentElement.querySelector('.field-hint');
+    if (hint) {
+      field.addEventListener('change', function() {
+        if (this.value) hint.style.display = 'block';
+      });
+    }
+  });
 }
 
 async function saveBankAccount() {
@@ -863,6 +1155,8 @@ function openAddGenerator() {
   document.getElementById('genLocBtn').textContent = '📍 Detect';
   document.getElementById('modalAlert').innerHTML = '';
   document.getElementById('generatorModal').classList.remove('hidden');
+  // Setup validation for equipment fields
+  setTimeout(setupEquipmentFieldValidation, 100);
 }
 
 function openEditGenerator(gen) {
@@ -884,6 +1178,8 @@ function openEditGenerator(gen) {
     ? `${Number(gen.latitude).toFixed(5)}, ${Number(gen.longitude).toFixed(5)}` : '';
   document.getElementById('modalAlert').innerHTML = '';
   document.getElementById('generatorModal').classList.remove('hidden');
+  // Setup validation for equipment fields
+  setTimeout(setupEquipmentFieldValidation, 100);
 }
 
 function closeModal() {

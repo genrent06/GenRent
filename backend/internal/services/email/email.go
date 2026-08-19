@@ -6,7 +6,31 @@ import (
 	"log"
 	"net/smtp"
 	"strings"
+	"sync"
 )
+
+// Global config storage
+var (
+	globalConfig Config
+	configMutex   sync.RWMutex
+)
+
+// InitConfig initializes the global email configuration
+func InitConfig(cfg Config) {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+	globalConfig = cfg
+}
+
+// getBaseURL returns the configured base URL or default
+func getBaseURL() string {
+	configMutex.RLock()
+	defer configMutex.RUnlock()
+	if globalConfig.BaseURL != "" {
+		return globalConfig.BaseURL
+	}
+	return "` + getBaseURL() + `"
+}
 
 // Config holds SMTP connection settings loaded from environment variables.
 // For local Postfix: Host=localhost, Port=25, User/Pass empty.
@@ -19,6 +43,7 @@ type Config struct {
 	From     string
 	FromName string
 	Enabled  bool
+	BaseURL  string // Base URL for email links (e.g., https://genrent.in)
 }
 
 // EmailData contains all the variables needed to render any email template.
@@ -84,7 +109,7 @@ func BookingRequested(data EmailData) string {
 	<p>You have a new booking request on <strong>GenRent</strong>.</p>
 	`+bookingBox(data)+`
 	<div style="text-align:center;margin:2rem 0;">
-		<a href="http://localhost:8080/vendor-dashboard" `+ctaStyle("primary")+`>View &amp; Accept Booking</a>
+		<a href="` + getBaseURL() + `/vendor-dashboard" `+ctaStyle("primary")+`>View &amp; Accept Booking</a>
 	</div>
 	<p style="color:#6b7280;font-size:0.85rem;">You have <strong>2 hours</strong> to accept or reject. After that the booking will be auto-cancelled.</p>
 	`)
@@ -99,7 +124,7 @@ func BookingAccepted(data EmailData) string {
 		<p style="margin:0;color:#15803d;"><strong>Next step:</strong> Complete the advance payment to secure your booking.</p>
 	</div>
 	<div style="text-align:center;margin:2rem 0;">
-		<a href="http://localhost:8080/my-bookings" `+ctaStyle("primary")+`>Pay Advance &amp; Confirm</a>
+		<a href="` + getBaseURL() + `/my-bookings" `+ctaStyle("primary")+`>Pay Advance &amp; Confirm</a>
 	</div>
 	`)
 }
@@ -114,7 +139,7 @@ func BookingRejected(data EmailData) string {
 	</div>
 	<p>No payment has been charged. You can search for other available generators.</p>
 	<div style="text-align:center;margin:2rem 0;">
-		<a href="http://localhost:8080" `+ctaStyle("secondary")+`>Find Another Generator</a>
+		<a href="` + getBaseURL() + `" `+ctaStyle("secondary")+`>Find Another Generator</a>
 	</div>
 	`)
 }
@@ -129,7 +154,7 @@ func PaymentReceived(data EmailData) string {
 		<p style="margin:0.5rem 0 0;color:#6b7280;font-size:0.85rem;">This will be released to your wallet after the customer confirms delivery.</p>
 	</div>
 	<div style="text-align:center;margin:2rem 0;">
-		<a href="http://localhost:8080/vendor-dashboard" `+ctaStyle("primary")+`>Go to Dashboard &amp; Dispatch</a>
+		<a href="` + getBaseURL() + `/vendor-dashboard" `+ctaStyle("primary")+`>Go to Dashboard &amp; Dispatch</a>
 	</div>
 	`)
 }
@@ -150,7 +175,7 @@ func GeneratorDispatched(data EmailData) string {
 	`+bookingBox(data)+`
 	`+otpSection+`
 	<div style="text-align:center;margin:2rem 0;">
-		<a href="http://localhost:8080/my-bookings" `+ctaStyle("primary")+`>Track Your Booking</a>
+		<a href="` + getBaseURL() + `/my-bookings" `+ctaStyle("primary")+`>Track Your Booking</a>
 	</div>
 	`)
 }
@@ -164,7 +189,7 @@ func DeliveryConfirmed(data EmailData) string {
 		<p style="margin:0;color:#15803d;"><strong>Amount credited:</strong> ₹`+fmt.Sprintf("%.0f", data.Amount)+`</p>
 	</div>
 	<div style="text-align:center;margin:2rem 0;">
-		<a href="http://localhost:8080/vendor-dashboard" `+ctaStyle("primary")+`>View Wallet</a>
+		<a href="` + getBaseURL() + `/vendor-dashboard" `+ctaStyle("primary")+`>View Wallet</a>
 	</div>
 	`)
 }
@@ -179,7 +204,7 @@ func BookingCancelled(data EmailData) string {
 	</div>
 	<p>If an advance was paid, it will be refunded within 3–5 business days.</p>
 	<div style="text-align:center;margin:2rem 0;">
-		<a href="http://localhost:8080" `+ctaStyle("secondary")+`>Browse Generators</a>
+		<a href="` + getBaseURL() + `" `+ctaStyle("secondary")+`>Browse Generators</a>
 	</div>
 	`)
 }
@@ -190,7 +215,7 @@ func BookingCompleted(data EmailData) string {
 	<p>Your rental has been completed. We hope everything went smoothly!</p>
 	`+bookingBox(data)+`
 	<div style="text-align:center;margin:2rem 0;">
-		<a href="http://localhost:8080/my-bookings" `+ctaStyle("primary")+`>Rate Your Experience</a>
+		<a href="` + getBaseURL() + `/my-bookings" `+ctaStyle("primary")+`>Rate Your Experience</a>
 	</div>
 	<p style="color:#6b7280;font-size:0.85rem;text-align:center;">Your feedback helps other customers make better decisions.</p>
 	`)
@@ -289,7 +314,7 @@ func renderTemplate(title string, data EmailData, content string) string {
       <tr><td style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:0 0 12px 12px;padding:1.25rem 2rem;text-align:center;">
         <p style="margin:0;color:#9ca3af;font-size:0.8rem;">© 2026 GenRent · This is an automated notification, please do not reply.</p>
         <p style="margin:0.5rem 0 0;color:#9ca3af;font-size:0.8rem;">
-          <a href="http://localhost:8080" style="color:#6b7280;">Visit GenRent</a>
+          <a href="` + getBaseURL() + `" style="color:#6b7280;">Visit GenRent</a>
         </p>
       </td></tr>
 
@@ -301,7 +326,7 @@ func renderTemplate(title string, data EmailData, content string) string {
 }
 
 func PasswordResetEmail(data EmailData) string {
-	resetURL := fmt.Sprintf("http://localhost:8080/reset-password?token=%s", data.Message)
+	resetURL := fmt.Sprintf("` + getBaseURL() + `/reset-password?token=%s", data.Message)
 	return renderTemplate("Reset Your Password", data, `
 		<p>Hello <strong>`+data.ToName+`</strong>,</p>
 		<p>We received a request to reset your password for your <strong>GenRent</strong> account.</p>
